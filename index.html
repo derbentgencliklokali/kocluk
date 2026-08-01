@@ -374,6 +374,8 @@ const seriHesapla = (kayitlar) => {
     });
     return { simdi, enUzun, son14 };
 };
+/* Seri seviyesi: 0 kırmızı → 4 mavi */
+const seriSeviye = (g) => (g === 0 ? 0 : g < 3 ? 1 : g < 7 ? 2 : g < 14 ? 3 : 4);
 /* --- boş bırakma --- */
 const bosAnaliz = (o, denemeler) => {
     const ders = {};
@@ -1068,20 +1070,17 @@ function Ozet({ o, set, salt, videoAc, rol }) {
             ["Bu ay", ist.ay], ["Toplam", ist.toplam]].map(([a, s]) => (React.createElement("div", { key: a, className: "mini" },
             React.createElement("div", { className: "mini-s" }, s),
             React.createElement("div", { className: "mini-a" }, a))))),
-        React.createElement("section", { className: "kart seri-kart" },
-            React.createElement("div", { className: "seri-ust" },
-                React.createElement("div", null,
-                    React.createElement("div", { className: "seri-sayi" }, seri.simdi),
-                    React.createElement("div", { className: "seri-a" }, "g\u00FCn aral\u0131ks\u0131z")),
-                React.createElement("div", { className: "seri-rekor" },
-                    React.createElement("div", { className: "seri-r-s" }, seri.enUzun),
-                    React.createElement("div", { className: "seri-r-a" }, "en uzun seri"))),
-            React.createElement("div", { className: "seri-noktalar" }, seri.son14.map((g) => (React.createElement("span", { key: g.tarih, className: g.var ? "nokta dolu" : "nokta" })))),
-            React.createElement("div", { className: "seri-yazi" }, seri.simdi === 0
-                ? "Bugün soru çözerek seriyi başlat."
-                : seri.simdi >= seri.enUzun && seri.simdi > 2
-                    ? "En uzun serindesin, bozma."
-                    : `Rekorun ${seri.enUzun} gün. Son 14 gün yukarıda.`)),
+        React.createElement("section", { className: `kart seri-kart s${seriSeviye(seri.simdi)}` },
+            React.createElement("div", { className: "seri-sol" },
+                React.createElement("div", { className: "seri-sayi" }, seri.simdi),
+                React.createElement("div", { className: "seri-a" }, "g\u00FCn seri")),
+            React.createElement("div", { className: "seri-sag" },
+                React.createElement("div", { className: "seri-noktalar" }, seri.son14.map((g) => (React.createElement("span", { key: g.tarih, className: g.var ? "nokta dolu" : "nokta" })))),
+                React.createElement("div", { className: "seri-yazi" }, seri.simdi === 0
+                    ? "Bugün çözerek başlat"
+                    : seri.simdi >= seri.enUzun && seri.simdi > 2
+                        ? "En uzun serindesin"
+                        : `Rekor ${seri.enUzun} gün`))),
         React.createElement("section", { className: "kart" },
             React.createElement("div", { className: "kart-ust" },
                 React.createElement("div", { className: "etiket" }, "BUG\u00DCN\u00DCN PROGRAMI"),
@@ -2572,20 +2571,6 @@ function Stil() {
   font-weight:700;color:var(--tur);text-decoration:none;padding:9px;
   border:1px solid var(--cizgi);border-radius:10px;}
 
-/* seri */
-.seri-kart{background:linear-gradient(140deg,#FFFFFF 0%,#FFF4E8 100%);
-  border-color:#F2DFC8;}
-.seri-ust{display:flex;justify-content:space-between;align-items:flex-end;}
-.seri-sayi{font-size:40px;font-weight:900;letter-spacing:-2px;line-height:1;
-  color:#C9701B;}
-.seri-a{font-size:11px;font-weight:700;color:#A8763C;margin-top:3px;}
-.seri-rekor{text-align:right;}
-.seri-r-s{font-size:18px;font-weight:900;color:var(--met);}
-.seri-r-a{font-size:9.5px;font-weight:700;color:var(--sol);margin-top:2px;}
-.seri-noktalar{display:flex;gap:4px;margin-top:14px;}
-.nokta{flex:1;height:9px;border-radius:3px;background:#EFE1D0;}
-.nokta.dolu{background:linear-gradient(180deg,#F0A03C,#D9781F);}
-.seri-yazi{font-size:12px;font-weight:600;color:#8A6845;margin-top:11px;}
 
 /* görüşme notları */
 .not-yaz{background:#FFFFFF;border:1.5px solid var(--cizgi);border-radius:11px;
@@ -2704,6 +2689,24 @@ function Stil() {
 .dosya-b{position:relative;overflow:hidden;display:inline-block;}
 .dosya-b input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;
   width:100%;height:100%;}
+
+/* seri */
+.seri-kart{display:flex;align-items:center;gap:16px;padding:13px 16px;
+  background:var(--s-bg);border-color:var(--s-cizgi);}
+.seri-kart.s0{--s-ana:#D9564A;--s-bg:#FDEEEC;--s-cizgi:#F4CFC9;--s-sol:#A9635B;--s-bos:#F3D8D4;}
+.seri-kart.s1{--s-ana:#E07B2A;--s-bg:#FFF4E8;--s-cizgi:#F2DFC8;--s-sol:#A87A46;--s-bos:#F5E1CC;}
+.seri-kart.s2{--s-ana:#C9A50A;--s-bg:#FFFBE6;--s-cizgi:#EDE2B4;--s-sol:#96854A;--s-bos:#EFE7C4;}
+.seri-kart.s3{--s-ana:#159070;--s-bg:#E6F6F0;--s-cizgi:#BEE3D6;--s-sol:#5C8C7E;--s-bos:#CEE8DE;}
+.seri-kart.s4{--s-ana:#2F6FB5;--s-bg:#EAF2FC;--s-cizgi:#C7DAF1;--s-sol:#6685A8;--s-bos:#D3E2F5;}
+.seri-sol{flex-shrink:0;text-align:center;min-width:52px;}
+.seri-sayi{font-size:27px;font-weight:900;letter-spacing:-1.2px;line-height:1;
+  color:var(--s-ana);}
+.seri-a{font-size:9px;font-weight:800;letter-spacing:.5px;color:var(--s-sol);margin-top:3px;}
+.seri-sag{flex:1;min-width:0;}
+.seri-noktalar{display:flex;gap:3px;}
+.nokta{flex:1;height:7px;border-radius:2px;background:var(--s-bos);}
+.nokta.dolu{background:var(--s-ana);}
+.seri-yazi{font-size:10.5px;font-weight:700;color:var(--s-sol);margin-top:7px;}
 
 /* alt menü */
 .alt{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;
