@@ -582,6 +582,26 @@ function HedefKart({ o }) {
                 React.createElement("span", { className: "hk-r-s" }, olcutYaz(o, o.hedefDilim)),
                 React.createElement("span", { className: "hk-r-a" }, o.seviye === "yks" ? "hedef sıra" : "hedef dilim")))));
 }
+/* Seçilen fotoğrafı küçültüp veri olarak döndürür (bağlantıya gerek kalmaz) */
+const gorselKucult = (dosya, enBoy = 440) => new Promise((coz, hata) => {
+    const okuyucu = new FileReader();
+    okuyucu.onerror = () => hata(new Error("Dosya okunamadı."));
+    okuyucu.onload = () => {
+        const img = new Image();
+        img.onerror = () => hata(new Error("Bu dosya bir görsel değil."));
+        img.onload = () => {
+            const olcek = Math.min(enBoy / img.width, enBoy / img.height, 1);
+            const g = Math.round(img.width * olcek), y = Math.round(img.height * olcek);
+            const tuval = document.createElement("canvas");
+            tuval.width = g;
+            tuval.height = y;
+            tuval.getContext("2d").drawImage(img, 0, 0, g, y);
+            coz(tuval.toDataURL("image/jpeg", 0.7));
+        };
+        img.src = okuyucu.result;
+    };
+    okuyucu.readAsDataURL(dosya);
+});
 /* --- video --- */
 const videoKimlik = (url) => {
     if (!url)
@@ -709,6 +729,8 @@ function DerbentLgs() {
         }
         catch (e) {
             console.error("Kayıt başarısız", e);
+            window.alert("Veriler kaydedilemedi. Telefon hafızası dolmuş olabilir — " +
+                "eklediğiniz fotoğraflardan birini kaldırmayı deneyin.");
         }
     };
     const ogrGuncelle = (id, yama) => kaydet(Object.assign(Object.assign({}, veri), { ogrenciler: veri.ogrenciler.map((o) => {
@@ -985,6 +1007,21 @@ function Panel({ veri, kaydet, setSeciliId, setMesajAcik, rol }) {
 function Ozet({ o, set, salt, videoAc, rol }) {
     var _a;
     const [duzenle, setDuzenle] = useState(false);
+    const [gorselHata, setGorselHata] = useState("");
+    const gorselSec = async (e) => {
+        const dosya = e.target.files && e.target.files[0];
+        e.target.value = "";
+        if (!dosya)
+            return;
+        setGorselHata("");
+        try {
+            const veri = await gorselKucult(dosya);
+            set({ hedefGorsel: veri });
+        }
+        catch (err) {
+            setGorselHata(err.message || "Görsel eklenemedi.");
+        }
+    };
     const ist = istHesapla(o.kayitlar);
     const seri = useMemo(() => seriHesapla(o.kayitlar), [o.kayitlar]);
     const hedef = Number(o.haftalikHedef) || 1;
@@ -1086,7 +1123,18 @@ function Ozet({ o, set, salt, videoAc, rol }) {
                     React.createElement("div", { className: "cipler" }, Object.entries(ALANLAR).map(([id, a]) => (React.createElement("button", { key: id, onClick: () => set({ alan: id }), className: o.alan === id ? "cip etkin" : "cip" }, a.kisa)))))),
                 React.createElement("div", { className: "form" },
                     React.createElement(Alan, { etiket: et.kurum, value: o.hedefLise, onChange: (e) => set({ hedefLise: e.target.value }) }),
-                    React.createElement(Alan, { etiket: "Okul / b\u00F6l\u00FCm g\u00F6rseli (ba\u011Flant\u0131)", value: o.hedefGorsel || "", placeholder: "https://... (bo\u015F b\u0131rak\u0131labilir)", onChange: (e) => set({ hedefGorsel: e.target.value }) }),
+                    React.createElement("div", { className: "alan" },
+                        React.createElement("span", null, "OKUL / B\u00D6L\u00DCM G\u00D6RSEL\u0130"),
+                        React.createElement("div", { className: "gorsel-satir" },
+                            o.hedefGorsel
+                                ? React.createElement("img", { className: "gorsel-on", src: o.hedefGorsel, alt: "" })
+                                : React.createElement("div", { className: "gorsel-on bos-on" }, "yok"),
+                            React.createElement("div", { className: "gorsel-d" },
+                                React.createElement("label", { className: "ikincil dosya-b" },
+                                    o.hedefGorsel ? "Değiştir" : "Fotoğraf seç",
+                                    React.createElement("input", { type: "file", accept: "image/*", onChange: gorselSec })),
+                                o.hedefGorsel && (React.createElement("button", { className: "ufak tehlike", onClick: () => set({ hedefGorsel: "" }) }, "Kald\u0131r")))),
+                        gorselHata && React.createElement("div", { className: "hata" }, gorselHata)),
                     React.createElement(Alan, { etiket: et.olcut, type: "number", step: o.seviye === "yks" ? "1" : "0.01", value: o.hedefDilim, onChange: (e) => set({ hedefDilim: e.target.value }) }),
                     React.createElement(Alan, { etiket: "Haftal\u0131k soru hedefi", type: "number", value: o.haftalikHedef, onChange: (e) => set({ haftalikHedef: e.target.value }) })))) : (React.createElement(HedefKart, { o: o }))),
         o.seviye === "yks"
@@ -2645,6 +2693,17 @@ function Stil() {
   color:var(--tur);background:var(--tur-a);padding:3px 7px;border-radius:5px;}
 .oneri-not{font-size:10px;font-weight:600;color:var(--sol);text-align:center;
   padding:6px 0 2px;}
+
+/* görsel seçici */
+.gorsel-satir{display:flex;align-items:center;gap:12px;}
+.gorsel-on{width:76px;height:56px;border-radius:11px;object-fit:cover;
+  flex-shrink:0;border:1px solid var(--cizgi);background:var(--yzy2);}
+.gorsel-on.bos-on{display:grid;place-items:center;font-size:10px;
+  font-weight:700;color:#A8BEC3;}
+.gorsel-d{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.dosya-b{position:relative;overflow:hidden;display:inline-block;}
+.dosya-b input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;
+  width:100%;height:100%;}
 
 /* alt menü */
 .alt{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;
