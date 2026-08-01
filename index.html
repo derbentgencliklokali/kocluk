@@ -1294,8 +1294,21 @@ function Soru({ o, set, salt }) {
     const dl = dersleriGetir(o);
     const [ders, setDers] = useState(dl[0].id);
     const [f, setF] = useState({ tarih: bugun(), konu: "", soru: "", dogru: "", yanlis: "" });
+    const [odak, setOdak] = useState(false);
     const k = katsayi(o);
     const ayirici = o.seviye === "yks" ? DERSLER_TYT.length : 0;
+    /* Seçili dersin konuları, yazdıkça daralır */
+    const eslesen = useMemo(() => {
+        const hepsi = o.konular[ders] || [];
+        const q = f.konu.trim().toLocaleLowerCase("tr");
+        if (!q)
+            return hepsi;
+        return hepsi.filter((x) => x.ad.toLocaleLowerCase("tr").includes(q));
+    }, [o.konular, ders, f.konu]);
+    const oneriler = eslesen.slice(0, 8);
+    const kalan = eslesen.length - oneriler.length;
+    /* Ders değişince öneri listesi kapansın */
+    useEffect(() => { setOdak(false); }, [ders]);
     const s = Number(f.soru) || 0, d = Number(f.dogru) || 0, y = Number(f.yanlis) || 0;
     const bos = Math.max(s - d - y, 0);
     const hata = s > 0 && d + y > s;
@@ -1324,8 +1337,15 @@ function Soru({ o, set, salt }) {
                 React.createElement(Alan, { etiket: "Tarih", type: "date", value: f.tarih, onChange: (e) => setF(Object.assign(Object.assign({}, f), { tarih: e.target.value })) }),
                 React.createElement("label", { className: "alan" },
                     React.createElement("span", null, "Konu"),
-                    React.createElement("input", { list: "konu-list", value: f.konu, placeholder: "Konu se\u00E7 veya yaz", onChange: (e) => setF(Object.assign(Object.assign({}, f), { konu: e.target.value })) }),
-                    React.createElement("datalist", { id: "konu-list" }, (o.konular[ders] || []).map((x) => React.createElement("option", { key: x.id, value: x.ad })))),
+                    React.createElement("input", { value: f.konu, placeholder: "Konu se\u00E7 veya yaz", onFocus: () => setOdak(true), onBlur: () => setTimeout(() => setOdak(false), 160), onChange: (e) => setF(Object.assign(Object.assign({}, f), { konu: e.target.value })) })),
+                odak && oneriler.length > 0 && (React.createElement("div", { className: "oneri-liste" },
+                    oneriler.map((k) => (React.createElement("button", { key: k.id, className: "oneri-b", onMouseDown: (e) => e.preventDefault(), onClick: () => { setF(Object.assign(Object.assign({}, f), { konu: k.ad })); setOdak(false); } },
+                        React.createElement("span", { className: "oneri-ad" }, k.ad),
+                        k.asama > 0 && (React.createElement("span", { className: "oneri-asama" }, ASAMALAR[k.asama - 1]))))),
+                    kalan > 0 && (React.createElement("div", { className: "oneri-not" },
+                        "+",
+                        kalan,
+                        " konu daha \u00B7 yazarak daraltabilirsin")))),
                 React.createElement("div", { className: "uclu" },
                     React.createElement(Alan, { etiket: "Soru", type: "number", inputMode: "numeric", value: f.soru, onChange: (e) => setF(Object.assign(Object.assign({}, f), { soru: e.target.value })) }),
                     React.createElement(Alan, { etiket: "Do\u011Fru", type: "number", inputMode: "numeric", value: f.dogru, onChange: (e) => setF(Object.assign(Object.assign({}, f), { dogru: e.target.value })) }),
@@ -2610,6 +2630,21 @@ function Stil() {
 .vid-gezinme{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px;}
 .vid-gezinme .ikincil{width:100%;}
 .vid-gezinme .ikincil:disabled{opacity:.4;cursor:not-allowed;}
+
+/* konu önerileri */
+.oneri-liste{display:flex;flex-direction:column;gap:4px;margin-top:-4px;
+  padding:8px;background:var(--yzy2);border-radius:12px;
+  max-height:290px;overflow-y:auto;}
+.oneri-b{display:flex;justify-content:space-between;align-items:center;gap:8px;
+  text-align:left;background:#FFFFFF;border:1.5px solid var(--cizgi);
+  border-radius:10px;padding:10px 12px;color:var(--met);font-family:inherit;
+  font-weight:700;font-size:12.5px;cursor:pointer;}
+.oneri-b:hover{border-color:var(--tur);color:var(--tur);}
+.oneri-ad{min-width:0;line-height:1.3;}
+.oneri-asama{flex-shrink:0;font-size:8.5px;font-weight:800;letter-spacing:.4px;
+  color:var(--tur);background:var(--tur-a);padding:3px 7px;border-radius:5px;}
+.oneri-not{font-size:10px;font-weight:600;color:var(--sol);text-align:center;
+  padding:6px 0 2px;}
 
 /* alt menü */
 .alt{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;
