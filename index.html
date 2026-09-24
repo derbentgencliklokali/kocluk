@@ -711,7 +711,7 @@ const GUNLER = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumart
 const GUN_KISA = ["PZT", "SAL", "ÇAR", "PER", "CUM", "CMT", "PAZ"];
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
     "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-const SAAT_BAS = 6, SAAT_SON = 24, SAAT_YUK = 54;
+const SAAT_BAS = 5, SAAT_SON = 24, SAAT_YUK = 36;
 const SURE_SECENEK = [15, 30, 45, 60, 90, 120];
 /* Ders renkleri — takvimde ayırt etmek için */
 const DERS_RENK = {
@@ -1747,6 +1747,7 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
     const [ekleAcik, setEkleAcik] = useState(false);
     const [sablonAcik, setSablonAcik] = useState(false);
     const [mesaj, setMesaj] = useState("");
+    const [konuAra, setKonuAra] = useState("");
     const bosForm = {
         ders: dl[0].id, konu: "", tarih: bugun(), saat: "", sure: 45, tekrar: true,
     };
@@ -1905,72 +1906,81 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                     React.createElement("button", { className: "ufak", onClick: () => sablonUygula(s, false) }, "Tekrars\u0131z"),
                     React.createElement("button", { className: "ufak tehlike", onClick: () => sablonSil(s.id) }, "Sil")))))),
             React.createElement("div", { className: "ipuc" }, "\u015Eablon, g\u00F6r\u00FCnt\u00FClenen haftan\u0131n pazartesisinden ba\u015Flayarak uygulan\u0131r."))),
-        ekleAcik && !salt && (React.createElement("section", { className: "kart" },
-            React.createElement("div", { className: "kart-ust" },
-                React.createElement("div", { className: "etiket" },
-                    "YEN\u0130 G\u00D6REV \u00B7 ",
-                    kisaTarih(f.tarih),
-                    f.saat ? ` · ${f.saat}` : ""),
-                React.createElement("button", { className: "vid-kapat", onClick: () => setEkleAcik(false) }, "\u00D7")),
-            React.createElement("div", { className: "kutucuk-a" }, "1 \u00B7 DERS"),
-            React.createElement(DersCipleri, { dersler: dl, secili: f.ders, sec: (id) => setF(Object.assign(Object.assign({}, f), { ders: id, konu: "" })), ayirici: o.seviye === "yks" ? DERSLER_TYT.length + DERSLER_CALISMA.length : 0 }),
-            React.createElement("div", { className: "kutucuk-a", style: { marginTop: 16 } }, "2 \u00B7 KONU"),
-            React.createElement("div", { className: "konu-sec" }, (o.konular[f.ders] || []).map((k) => (React.createElement("button", { key: k.id, className: f.konu === k.ad ? "konu-sec-b etkin" : "konu-sec-b", onClick: () => setF(Object.assign(Object.assign({}, f), { konu: k.ad })) },
-                k.ad,
-                k.asama > 0 && React.createElement("span", { className: "oneri-asama" }, ASAMALAR[k.asama - 1]))))),
-            React.createElement("div", { className: "kutucuk-a", style: { marginTop: 16 } }, "3 \u00B7 ZAMAN"),
-            React.createElement("div", { className: "form" },
-                React.createElement("div", { className: "ikili-g" },
-                    React.createElement(Alan, { etiket: "Tarih", type: "date", value: f.tarih, onChange: (e) => setF(Object.assign(Object.assign({}, f), { tarih: e.target.value })) }),
-                    React.createElement(Alan, { etiket: "Saat (iste\u011Fe ba\u011Fl\u0131)", type: "time", value: f.saat, onChange: (e) => setF(Object.assign(Object.assign({}, f), { saat: e.target.value })) }))),
-            React.createElement("div", { className: "kutucuk-a", style: { marginTop: 12 } }, "S\u00DCRE"),
-            React.createElement("div", { className: "cipler" }, SURE_SECENEK.map((x) => (React.createElement("button", { key: x, onClick: () => setF(Object.assign(Object.assign({}, f), { sure: x })), className: Number(f.sure) === x ? "cip etkin" : "cip" },
-                x,
-                " dk")))),
-            React.createElement("button", { className: f.tekrar ? "onay etkin" : "onay", onClick: () => setF(Object.assign(Object.assign({}, f), { tekrar: !f.tekrar })) },
-                React.createElement("span", { className: "onay-k" }, f.tekrar ? "✓" : ""),
-                "Tekrarlar\u0131 otomatik planla (1 g\u00FCn \u00B7 1 hafta \u00B7 1 ay \u00B7 3 ay \u00B7 6 ay)"),
-            React.createElement("button", { className: "birincil", onClick: gorevEkle, disabled: !f.konu.trim() }, "G\u00F6revi ekle"))),
-        seciliGorev && (React.createElement("section", { className: "kart gorev-panel", style: { "--c": dersRenk(seciliGorev.ders) } },
-            React.createElement("div", { className: "kart-ust" },
-                React.createElement("div", { className: "gp-baslik" },
-                    React.createElement("span", { className: "gp-ders" }, (_a = dl.find((x) => x.id === seciliGorev.ders)) === null || _a === void 0 ? void 0 :
-                        _a.kisa,
-                        seciliGorev.tip === "tekrar" &&
-                            ` · ${TEKRAR_AD[seciliGorev.kademe]} tekrar`),
-                    React.createElement("div", { className: "gp-konu" }, seciliGorev.konu),
-                    React.createElement("div", { className: "gp-tarih" },
-                        GUNLER[gunIndeksi(seciliGorev.tarih)],
-                        ", ",
-                        kisaTarih(seciliGorev.tarih),
-                        seciliGorev.saat ? ` · ${seciliGorev.saat}` : "",
-                        " \u00B7 ",
-                        seciliGorev.sure,
-                        " dk")),
-                React.createElement("button", { className: "vid-kapat", onClick: () => setSecili(null) }, "\u00D7")),
-            !salt && (React.createElement(React.Fragment, null,
-                React.createElement("button", { className: seciliGorev.tamam ? "birincil bitti-b" : "birincil", onClick: () => tamamla(seciliGorev) }, seciliGorev.tamam ? "✓ Tamamlandı — geri al" : "Tamamlandı olarak işaretle"),
-                React.createElement("div", { className: "kutucuk-a", style: { marginTop: 16 } }, "ERTELE"),
-                React.createElement("div", { className: "cipler" }, [[1, "+1 gün"], [2, "+2 gün"], [7, "+1 hafta"]].map(([n, ad]) => (React.createElement("button", { key: n, className: "cip", onClick: () => ertele(seciliGorev, n) }, ad)))),
-                React.createElement("div", { className: "form" },
-                    React.createElement("div", { className: "uclu" },
-                        React.createElement(Alan, { etiket: "Tarih", type: "date", value: seciliGorev.tarih, onChange: (e) => guncelle(seciliGorev.id, { tarih: e.target.value }) }),
-                        React.createElement(Alan, { etiket: "Saat", type: "time", value: seciliGorev.saat || "", onChange: (e) => guncelle(seciliGorev.id, { saat: e.target.value }) }),
-                        React.createElement(Alan, { etiket: "S\u00FCre (dk)", type: "number", value: seciliGorev.sure, onChange: (e) => guncelle(seciliGorev.id, { sure: Number(e.target.value) || 15 }) }))),
-                React.createElement("div", { className: "konu-panel-d" },
-                    (() => {
-                        const vd = videoBul(o, seciliGorev.ders, seciliGorev.konu);
-                        return vd.toplam > 0 ? (React.createElement("button", { className: "ikincil", onClick: () => videoAc({
-                                liste: vd.liste, indeks: sonrakiBolum(vd.liste),
-                                baslik: seciliGorev.konu, tamamla: () => { },
-                            }) },
-                            "\u25B6 Video (",
-                            vd.izlenen,
-                            "/",
-                            vd.toplam,
-                            ")")) : null;
-                    })(),
-                    React.createElement("button", { className: "ufak tehlike", onClick: () => sil(seciliGorev) }, "Sil")))))),
+        ekleAcik && !salt && (React.createElement("div", { className: "gd-perde", onClick: () => setEkleAcik(false) },
+            React.createElement("div", { className: "gd", onClick: (e) => e.stopPropagation() },
+                React.createElement("div", { className: "gd-ust" },
+                    React.createElement("div", null,
+                        React.createElement("div", { className: "gd-a" }, "YEN\u0130 G\u00D6REV"),
+                        React.createElement("div", { className: "gd-b" },
+                            kisaTarih(f.tarih),
+                            f.saat ? ` · ${f.saat}` : "",
+                            " \u00B7 ",
+                            f.sure,
+                            " dk")),
+                    React.createElement("button", { className: "vid-kapat", onClick: () => setEkleAcik(false) }, "\u00D7")),
+                React.createElement("div", { className: "gd-govde" },
+                    React.createElement("div", { className: "gd-e" }, "DERS"),
+                    React.createElement(DersCipleri, { dersler: dl, secili: f.ders, sec: (id) => { setF(Object.assign(Object.assign({}, f), { ders: id, konu: "" })); setKonuAra(""); }, ayirici: o.seviye === "yks" ? DERSLER_TYT.length + DERSLER_CALISMA.length : 0 }),
+                    React.createElement("div", { className: "gd-e" }, "KONU"),
+                    React.createElement("input", { className: "gd-ara", value: konuAra, placeholder: "Konu ara\u2026", onChange: (e) => setKonuAra(e.target.value) }),
+                    React.createElement("div", { className: "gd-konular" }, (o.konular[f.ders] || [])
+                        .filter((k) => !konuAra.trim() ||
+                        k.ad.toLocaleLowerCase("tr").includes(konuAra.toLocaleLowerCase("tr")))
+                        .map((k) => (React.createElement("button", { key: k.id, className: f.konu === k.ad ? "gd-konu etkin" : "gd-konu", onClick: () => setF(Object.assign(Object.assign({}, f), { konu: k.ad })) },
+                        k.ad,
+                        k.asama > 0 && React.createElement("i", null, ASAMALAR[k.asama - 1]))))),
+                    React.createElement("div", { className: "gd-e" }, "ZAMAN"),
+                    React.createElement("div", { className: "gd-zaman" },
+                        React.createElement("input", { type: "date", value: f.tarih, onChange: (e) => setF(Object.assign(Object.assign({}, f), { tarih: e.target.value })) }),
+                        React.createElement("input", { type: "time", value: f.saat, onChange: (e) => setF(Object.assign(Object.assign({}, f), { saat: e.target.value })) })),
+                    React.createElement("div", { className: "gd-sure" }, SURE_SECENEK.map((x) => (React.createElement("button", { key: x, onClick: () => setF(Object.assign(Object.assign({}, f), { sure: x })), className: Number(f.sure) === x ? "gd-s etkin" : "gd-s" }, x)))),
+                    React.createElement("button", { className: f.tekrar ? "gd-onay etkin" : "gd-onay", onClick: () => setF(Object.assign(Object.assign({}, f), { tekrar: !f.tekrar })) },
+                        React.createElement("span", { className: "onay-k" }, f.tekrar ? "✓" : ""),
+                        "Tekrarlar\u0131 planla \u00B7 1G 1H 1A 3A 6A")),
+                React.createElement("div", { className: "gd-alt" },
+                    React.createElement("span", { className: "gd-secim" }, f.konu || "Konu seçilmedi"),
+                    React.createElement("button", { className: "birincil gd-kaydet", onClick: gorevEkle, disabled: !f.konu.trim() }, "Kaydet"))))),
+        seciliGorev && (React.createElement("div", { className: "gd-perde", onClick: () => setSecili(null) },
+            React.createElement("div", { className: "gd", style: { "--c": dersRenk(seciliGorev.ders) }, onClick: (e) => e.stopPropagation() },
+                React.createElement("div", { className: "gd-ust renkli" },
+                    React.createElement("div", null,
+                        React.createElement("div", { className: "gd-a" }, (_a = dl.find((x) => x.id === seciliGorev.ders)) === null || _a === void 0 ? void 0 :
+                            _a.kisa,
+                            seciliGorev.tip === "tekrar" && ` · ${TEKRAR_AD[seciliGorev.kademe]}`),
+                        React.createElement("div", { className: "gd-k" }, seciliGorev.konu),
+                        React.createElement("div", { className: "gd-b" },
+                            GUNLER[gunIndeksi(seciliGorev.tarih)],
+                            ", ",
+                            kisaTarih(seciliGorev.tarih),
+                            seciliGorev.saat ? ` · ${seciliGorev.saat}` : "",
+                            " \u00B7 ",
+                            seciliGorev.sure,
+                            " dk")),
+                    React.createElement("button", { className: "vid-kapat", onClick: () => setSecili(null) }, "\u00D7")),
+                !salt && (React.createElement("div", { className: "gd-govde" },
+                    React.createElement("div", { className: "gd-e" }, "ERTELE"),
+                    React.createElement("div", { className: "gd-sure" }, [[1, "+1 gün"], [2, "+2 gün"], [7, "+1 hafta"]].map(([n, ad]) => (React.createElement("button", { key: n, className: "gd-s", onClick: () => ertele(seciliGorev, n) }, ad)))),
+                    React.createElement("div", { className: "gd-e" }, "ZAMAN"),
+                    React.createElement("div", { className: "gd-zaman uclu-z" },
+                        React.createElement("input", { type: "date", value: seciliGorev.tarih, onChange: (e) => guncelle(seciliGorev.id, { tarih: e.target.value }) }),
+                        React.createElement("input", { type: "time", value: seciliGorev.saat || "", onChange: (e) => guncelle(seciliGorev.id, { saat: e.target.value }) }),
+                        React.createElement("input", { type: "number", value: seciliGorev.sure, min: "15", step: "15", onChange: (e) => guncelle(seciliGorev.id, { sure: Number(e.target.value) || 15 }) })),
+                    React.createElement("div", { className: "gd-d" },
+                        (() => {
+                            const vd = videoBul(o, seciliGorev.ders, seciliGorev.konu);
+                            return vd.toplam > 0 ? (React.createElement("button", { className: "ikincil", onClick: () => videoAc({
+                                    liste: vd.liste, indeks: sonrakiBolum(vd.liste),
+                                    baslik: seciliGorev.konu, tamamla: () => { },
+                                }) },
+                                "\u25B6 Video (",
+                                vd.izlenen,
+                                "/",
+                                vd.toplam,
+                                ")")) : null;
+                        })(),
+                        React.createElement("button", { className: "ufak tehlike", onClick: () => sil(seciliGorev) }, "Sil")))),
+                !salt && (React.createElement("div", { className: "gd-alt" },
+                    React.createElement("button", { className: seciliGorev.tamam ? "birincil bitti-b" : "birincil", style: { margin: 0, width: "100%" }, onClick: () => tamamla(seciliGorev) }, seciliGorev.tamam ? "✓ Tamamlandı — geri al" : "Tamamlandı işaretle")))))),
         React.createElement(Izgara, { dl: dl, gunler: gorunum === "hafta" ? hafta : [odak], gorevler: gorevler, salt: salt, setSecili: setSecili, bosTikla: (t, sa) => { setF(Object.assign(Object.assign({}, bosForm), { tarih: t, saat: sa })); setEkleAcik(true); setSablonAcik(false); }, tasi: (id, t, sa) => guncelle(id, { tarih: t, saat: sa }), boyutla: (id, sure) => guncelle(id, { sure }) }),
         React.createElement("button", { className: "ikincil tam", onClick: () => window.print() }, "Bu haftay\u0131 PDF olarak indir"),
         React.createElement("div", { className: "baski" },
@@ -3215,39 +3225,96 @@ function Stil() {
 .tk-arac{display:flex;justify-content:space-between;align-items:center;
   gap:8px;margin-top:12px;flex-wrap:wrap;}
 
+/* görev penceresi */
+.gd-perde{position:fixed;inset:0;z-index:60;background:rgba(10,30,36,.55);
+  display:flex;align-items:center;justify-content:center;padding:14px;}
+.gd{width:100%;max-width:420px;max-height:min(88vh, 660px);background:#fff;
+  border-radius:18px;display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:0 18px 50px rgba(0,0,0,.3);}
+.gd-ust{display:flex;align-items:flex-start;gap:10px;padding:13px 14px;
+  border-bottom:1px solid var(--cizgi);flex-shrink:0;}
+.gd-ust.renkli{border-left:4px solid var(--c);}
+.gd-a{font-size:9px;font-weight:800;letter-spacing:1.2px;color:var(--sol);}
+.gd-ust.renkli .gd-a{color:var(--c);}
+.gd-k{font-size:15px;font-weight:800;letter-spacing:-.2px;margin-top:2px;}
+.gd-b{font-size:11px;font-weight:700;color:var(--sol);margin-top:3px;}
+.gd-govde{flex:1;overflow-y:auto;padding:12px 14px;}
+.gd-e{font-size:8.5px;font-weight:800;letter-spacing:1.1px;color:var(--sol);
+  margin:12px 0 6px;}
+.gd-e:first-child{margin-top:0;}
+.gd-ara{width:100%;background:var(--yzy2);border:1.5px solid transparent;
+  border-radius:9px;padding:8px 10px;font-family:inherit;font-weight:600;
+  font-size:12.5px;color:var(--met);outline:none;margin-bottom:6px;}
+.gd-ara:focus{border-color:var(--tur);background:#fff;}
+.gd-konular{display:flex;flex-direction:column;gap:3px;max-height:160px;
+  overflow-y:auto;padding-right:2px;}
+.gd-konu{display:flex;justify-content:space-between;align-items:center;gap:8px;
+  text-align:left;background:var(--yzy2);border:1.5px solid transparent;
+  border-radius:8px;padding:7px 10px;font-family:inherit;font-weight:700;
+  font-size:12px;color:var(--met);cursor:pointer;}
+.gd-konu i{font-style:normal;font-size:8px;font-weight:800;color:var(--tur);
+  background:var(--tur-a);padding:2px 5px;border-radius:4px;flex-shrink:0;}
+.gd-konu.etkin{background:var(--tur);color:#fff;border-color:var(--tur);}
+.gd-konu.etkin i{background:rgba(255,255,255,.25);color:#fff;}
+.gd-zaman{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.gd-zaman.uclu-z{grid-template-columns:1.3fr 1fr .8fr;}
+.gd-zaman input{background:var(--yzy2);border:1.5px solid transparent;border-radius:9px;
+  padding:8px 10px;font-family:inherit;font-weight:700;font-size:12.5px;
+  color:var(--met);outline:none;width:100%;}
+.gd-zaman input:focus{border-color:var(--tur);background:#fff;}
+.gd-sure{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;}
+.gd-s{background:var(--yzy2);border:1.5px solid transparent;border-radius:99px;
+  padding:6px 11px;font-family:inherit;font-weight:800;font-size:11px;
+  color:var(--sol);cursor:pointer;}
+.gd-s.etkin{background:var(--tur);color:#fff;}
+.gd-onay{display:flex;align-items:center;gap:8px;width:100%;margin-top:14px;
+  background:none;border:none;padding:0;cursor:pointer;font-family:inherit;
+  font-size:11.5px;font-weight:700;color:var(--sol);text-align:left;}
+.gd-onay.etkin{color:var(--tur);}
+.gd-onay .onay-k{width:20px;height:20px;border-radius:6px;background:#fff;
+  border:1.5px solid var(--cizgi);}
+.gd-onay.etkin .onay-k{background:var(--tur);border-color:var(--tur);}
+.gd-d{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;}
+.gd-alt{display:flex;align-items:center;gap:10px;padding:11px 14px;
+  border-top:1px solid var(--cizgi);background:#FBFDFD;flex-shrink:0;}
+.gd-secim{flex:1;font-size:11.5px;font-weight:700;color:var(--met);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.gd-kaydet{margin:0;width:auto;padding:11px 22px;flex-shrink:0;}
+
 /* takvim ızgarası */
-.tkv{overflow-x:auto;-webkit-overflow-scrolling:touch;
+.tkv{overflow:auto;-webkit-overflow-scrolling:touch;
+  max-height:min(560px, calc(100vh - 300px));
   background:var(--yzy);border:1px solid var(--cizgi);border-radius:16px;
   box-shadow:var(--golge);}
 .tkv-tablo{display:grid;grid-template-columns:52px repeat(var(--gun), minmax(104px,1fr));
   min-width:100%;position:relative;touch-action:pan-y;}
 
-.tkv-kose{position:sticky;left:0;z-index:4;background:var(--yzy);
+.tkv-kose{position:sticky;left:0;top:0;z-index:6;background:var(--yzy);
   border-right:1px solid var(--cizgi);border-bottom:1px solid var(--cizgi);}
 .tkv-tg-a{display:flex;align-items:center;justify-content:center;font-size:8px;
   font-weight:800;letter-spacing:.6px;color:var(--sol);}
-.tkv-baslik{display:flex;flex-direction:column;align-items:center;gap:1px;
-  padding:9px 2px;border-bottom:1px solid var(--cizgi);
+.tkv-baslik{display:flex;flex-direction:column;align-items:center;gap:0;
+  padding:6px 2px;border-bottom:1px solid var(--cizgi);
   border-left:1px solid var(--cizgi);background:var(--yzy);
   position:sticky;top:0;z-index:3;}
 .tkv-b-ad{font-size:9px;font-weight:800;letter-spacing:.8px;color:var(--sol);}
-.tkv-b-t{font-size:16px;font-weight:900;color:var(--met);line-height:1.1;}
+.tkv-b-t{font-size:14px;font-weight:900;color:var(--met);line-height:1.1;}
 .tkv-baslik.bugun{background:var(--tur-a);}
 .tkv-baslik.bugun .tkv-b-t,.tkv-baslik.bugun .tkv-b-ad{color:var(--tur);}
 
-.tkv-tumgun{min-height:30px;padding:3px;display:flex;flex-direction:column;gap:3px;
+.tkv-tumgun{min-height:24px;padding:2px;display:flex;flex-direction:column;gap:3px;
   border-left:1px solid var(--cizgi);border-bottom:1px solid var(--cizgi);
   background:#FAFCFC;}
-.tkv-mini{text-align:left;background:#fff;border:1px dashed var(--c);
+.tkv-mini{text-align:left;line-height:1.2;background:#fff;border:1px dashed var(--c);
   border-left:3px solid var(--c);border-radius:6px;padding:3px 5px;
-  font-family:inherit;font-size:9.5px;font-weight:700;color:var(--met);
+  font-family:inherit;font-size:8.5px;font-weight:700;color:var(--met);
   cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tkv-mini b{color:var(--c);margin-right:3px;}
 .tkv-mini.bitti{opacity:.45;text-decoration:line-through;}
 
 .tkv-saatler{position:sticky;left:0;z-index:2;background:var(--yzy);
   border-right:1px solid var(--cizgi);}
-.tkv-saat{font-size:9.5px;font-weight:800;color:var(--sol);text-align:right;
+.tkv-saat{font-size:9px;font-weight:800;color:var(--sol);text-align:right;
   padding-right:6px;transform:translateY(-6px);font-variant-numeric:tabular-nums;}
 
 .tkv-sutun{position:relative;border-left:1px solid var(--cizgi);cursor:pointer;
@@ -3259,20 +3326,20 @@ function Stil() {
 .tkv-simdi::before{content:"";position:absolute;left:-3px;top:-3px;width:8px;height:8px;
   border-radius:50%;background:#D9534F;}
 
-.tkv-blok{position:absolute;z-index:3;border-radius:7px;overflow:hidden;
+.tkv-blok{position:absolute;z-index:3;border-radius:6px;overflow:hidden;
   background:color-mix(in srgb, var(--c) 14%, #fff);
   border:1px solid color-mix(in srgb, var(--c) 40%, #fff);
   border-left:3px solid var(--c);
-  padding:3px 5px 3px 6px;cursor:grab;touch-action:none;
+  padding:2px 4px 2px 5px;cursor:grab;touch-action:none;
   display:flex;flex-direction:column;gap:1px;}
 .tkv-blok.tekrar{background:#fff;border-style:dashed;border-left-style:solid;}
 .tkv-blok.bitti{opacity:.5;}
 .tkv-blok.bitti .tkv-blok-k{text-decoration:line-through;}
 .tkv-blok.suruklenen{z-index:10;cursor:grabbing;opacity:.9;
   box-shadow:0 6px 18px rgba(18,48,58,.22);}
-.tkv-blok-s{font-size:8.5px;font-weight:900;color:var(--c);
+.tkv-blok-s{font-size:8px;font-weight:900;color:var(--c);
   font-variant-numeric:tabular-nums;white-space:nowrap;}
-.tkv-blok-k{font-size:10.5px;font-weight:700;color:var(--met);line-height:1.25;
+.tkv-blok-k{font-size:9.5px;font-weight:700;color:var(--met);line-height:1.2;
   overflow:hidden;}
 .tkv-blok-k b{color:var(--c);}
 .tkv-tut{position:absolute;left:0;right:0;bottom:0;height:9px;cursor:ns-resize;
@@ -3710,8 +3777,10 @@ function Stil() {
   .balon{max-width:68%;}
   .yaz-cubugu{position:sticky;bottom:18px;}
 
-  .tkv-blok-k{font-size:11.5px;}
+  .tkv-blok-k{font-size:10.5px;}
   .tkv-tablo{grid-template-columns:56px repeat(var(--gun), minmax(120px,1fr));}
+  .tkv{max-height:min(680px, calc(100vh - 260px));}
+  .gd{max-width:460px;}
   .ogr-dugmeler .ufak{padding:9px 13px;font-size:11.5px;}
   .cip{padding:10px 16px;font-size:11.5px;}
   .konu-ad,.oneri-b,.isaret-ad{font-size:13.5px;}
