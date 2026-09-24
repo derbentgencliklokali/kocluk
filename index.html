@@ -739,6 +739,12 @@ const ETKINLIKLER = [
 ];
 const etkinlikBul = (id) => ETKINLIKLER.find((x) => x.id === id) || ETKINLIKLER[6];
 const dersRenk = (id) => DERS_RENK[id] || "#6C8A93";
+/* Rengi koyulaştırır — açık dolgu üzerinde yazı okunaklı kalsın diye */
+const koyult = (hex, k = 0.42) => {
+    const h = String(hex).replace("#", "");
+    const p = (i) => Math.round(parseInt(h.slice(i, i + 2), 16) * (1 - k));
+    return `rgb(${p(0)}, ${p(2)}, ${p(4)})`;
+};
 /* Hex rengi saydam tona çevirir — yazdırmada color-mix'e güvenmemek için */
 const ton = (hex, a) => {
     const h = String(hex).replace("#", "");
@@ -2112,10 +2118,10 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                         React.createElement("span", null, kisaTarih(t))))),
                     React.createElement("div", { className: "pt-kose pt-tg" }, "tekrar"),
                     hafta.map((t) => (React.createElement("div", { className: "pt-tumgun", key: "tg" + t, style: { height: `${seritMM}mm` } }, gorevler.filter((g) => g.tarih === t && !g.saat).map((g) => (React.createElement("div", { className: "pt-mini", key: g.id, style: { borderLeftColor: gorevRenk(g),
-                            background: ton(gorevRenk(g), 0.1) } },
+                            background: ton(gorevRenk(g), 0.22) } },
                         React.createElement("span", { className: "pt-tik" }),
                         React.createElement("span", null,
-                            React.createElement("b", { style: { color: gorevRenk(g) } }, g.tip === "tekrar" ? TEKRAR_KISA[g.kademe] : gorevEtiket(g, dl)),
+                            React.createElement("b", { style: { color: koyult(gorevRenk(g)) } }, g.tip === "tekrar" ? TEKRAR_KISA[g.kademe] : gorevEtiket(g, dl)),
                             " ",
                             g.konu))))))),
                     React.createElement("div", { className: "pt-saatler", style: { height: `calc(${bt - bs} * ${SY}mm)` } }, saatler.map((h) => (React.createElement("div", { className: "pt-saat", key: h, style: { height: `${SY}mm` } },
@@ -2133,14 +2139,15 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                                         height: `calc(${Math.max(g.sure || 45, 25) / 60} * ${SY}mm - 0.6mm)`,
                                         left: `${sutun * gen}%`, width: `${gen}%`,
                                         background: g.tip === "deneme"
-                                            ? ton(gorevRenk(g), 0.82) : ton(gorevRenk(g), 0.14),
-                                        borderColor: ton(gorevRenk(g), 0.55),
+                                            ? gorevRenk(g)
+                                            : ton(gorevRenk(g), g.tip === "tekrar" ? 0.2 : 0.42),
+                                        borderColor: gorevRenk(g),
                                         borderLeftColor: gorevRenk(g),
-                                        color: g.tip === "deneme" ? "#fff" : "#1B2C33",
+                                        color: g.tip === "deneme" ? "#fff" : "#12262D",
                                     } },
                                     React.createElement("span", { className: "pt-tik" }),
                                     React.createElement("span", { className: "pt-blok-y" },
-                                        React.createElement("b", { style: { color: g.tip === "deneme" ? "#fff" : gorevRenk(g) } }, gorevEtiket(g, dl)),
+                                        React.createElement("b", { style: { color: g.tip === "deneme" ? "#fff" : koyult(gorevRenk(g)) } }, gorevEtiket(g, dl)),
                                         React.createElement("i", null, g.konu),
                                         React.createElement("u", null,
                                             g.saat,
@@ -3553,7 +3560,8 @@ function Stil() {
 .tkv-tumgun{min-height:24px;padding:2px;display:flex;flex-direction:column;gap:3px;
   border-left:1px solid var(--cizgi);border-bottom:1px solid var(--cizgi);
   background:#FAFCFC;}
-.tkv-mini{text-align:left;line-height:1.2;background:#fff;border:1px dashed var(--c);
+.tkv-mini{text-align:left;line-height:1.2;
+  background:color-mix(in srgb, var(--c) 16%, #fff);border:1px dashed var(--c);
   border-left:3px solid var(--c);border-radius:6px;padding:3px 5px;
   font-family:inherit;font-size:8.5px;font-weight:700;color:var(--met);
   cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -3577,26 +3585,28 @@ function Stil() {
   border-radius:50%;background:#D9534F;}
 
 .tkv-blok{position:absolute;z-index:3;border-radius:6px;overflow:hidden;
-  background:color-mix(in srgb, var(--c) 14%, #fff);
-  border:1px solid color-mix(in srgb, var(--c) 40%, #fff);
+  background:color-mix(in srgb, var(--c) 30%, #fff);
+  border:1px solid color-mix(in srgb, var(--c) 62%, #fff);
   border-left:3px solid var(--c);
   padding:2px 4px 2px 5px;cursor:grab;touch-action:none;
   display:flex;flex-direction:column;gap:1px;}
-.tkv-blok.tekrar{background:#fff;border-style:dashed;border-left-style:solid;}
+.tkv-blok.tekrar{background:color-mix(in srgb, var(--c) 12%, #fff);
+  border-style:dashed;border-left-style:solid;}
 .tkv-blok.deneme{background:color-mix(in srgb, var(--c) 88%, #fff);border-width:0;}
-.tkv-blok.etkinlik{background:color-mix(in srgb, var(--c) 11%, #fff);
-  border-style:solid;border-color:color-mix(in srgb, var(--c) 34%, #fff);}
+.tkv-blok.etkinlik{background:color-mix(in srgb, var(--c) 24%, #fff);
+  border-style:solid;border-color:color-mix(in srgb, var(--c) 55%, #fff);}
 .tkv-blok.deneme .tkv-blok-s,.tkv-blok.deneme .tkv-blok-k,
 .tkv-blok.deneme .tkv-blok-k b{color:#fff;}
 .tkv-blok.bitti{opacity:.5;}
 .tkv-blok.bitti .tkv-blok-k{text-decoration:line-through;}
 .tkv-blok.suruklenen{z-index:10;cursor:grabbing;opacity:.9;
   box-shadow:0 6px 18px rgba(18,48,58,.22);}
-.tkv-blok-s{font-size:8px;font-weight:900;color:var(--c);
+.tkv-blok-s{font-size:8px;font-weight:900;
+  color:color-mix(in srgb, var(--c) 78%, #000);
   font-variant-numeric:tabular-nums;white-space:nowrap;}
 .tkv-blok-k{font-size:9.5px;font-weight:700;color:var(--met);line-height:1.2;
   overflow:hidden;}
-.tkv-blok-k b{color:var(--c);}
+.tkv-blok-k b{color:color-mix(in srgb, var(--c) 75%, #000);}
 .tkv-tut{position:absolute;left:0;right:0;bottom:0;height:9px;cursor:ns-resize;
   touch-action:none;}
 .tkv-tut::after{content:"";position:absolute;left:50%;bottom:2px;width:18px;height:2px;
