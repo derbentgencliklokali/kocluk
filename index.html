@@ -74,6 +74,10 @@ const DERSLER_TYT = [
     { id: "t-kimya", ad: "KİMYA", kisa: "KİM", denemeSoru: 7 },
     { id: "t-biyoloji", ad: "BİYOLOJİ", kisa: "BİY", denemeSoru: 6 },
 ];
+/* Denemede ayrı sorulmaz ama çalışma takibinde ayrı tutulur */
+const DERSLER_CALISMA = [
+    { id: "geometri", ad: "GEOMETRİ", kisa: "GEO", denemeSoru: 0, sadeceCalisma: true },
+];
 const AYT_TUM = {
     "a-mat": { ad: "MATEMATİK", kisa: "MAT", denemeSoru: 40 },
     "a-fizik": { ad: "FİZİK", kisa: "FİZ", denemeSoru: 14 },
@@ -102,7 +106,7 @@ const aytDersleri = (alan) => (ALANLAR[alan] || ALANLAR.say).ayt.map((id) => (Ob
 const dersleriGetir = (o) => {
     if (!o || o.seviye !== "yks")
         return DERSLER_LGS;
-    return [...DERSLER_TYT, ...aytDersleri(o.alan)];
+    return [...DERSLER_TYT, ...DERSLER_CALISMA, ...aytDersleri(o.alan)];
 };
 /* Belirli bir deneme türünün dersleri */
 const denemeDersleri = (o, tur) => {
@@ -149,122 +153,547 @@ const KONULAR_LGS = {
     ],
 };
 const KONULAR_YKS = {
-    /* --- TYT --- */
     "t-turkce": [
-        "Sözcükte Anlam", "Cümlede Anlam", "Paragraf", "Ses Bilgisi",
-        "Yazım Kuralları", "Noktalama İşaretleri", "Sözcük Türleri",
-        "Fiilimsiler", "Cümlenin Ögeleri", "Cümle Türleri",
-        "Anlatım Bozukluğu", "Sözcükte Yapı",
+        "Sözcük Anlamı",
+        "Söz Yorumu",
+        "Deyim ve Atasözü",
+        "Cümle Anlamı",
+        "Cümle Yorumu",
+        "Paragrafta Anlatım Teknikleri",
+        "Paragrafta Konu-Ana Düşünce",
+        "Paragrafta Yapı",
+        "Paragrafta Yardımcı Düşünce",
+        "Ses Bilgisi",
+        "Yazım Kuralları",
+        "Noktalama İşaretleri",
+        "Sözcüğün Yapısı",
+        "Sözcük Türleri",
+        "Fiiller",
+        "Sözcük Grupları",
+        "Cümlenin Ögeleri",
+        "Cümle Türleri",
+        "Anlatım Bozukluğu"
     ],
     "t-mat": [
-        "Temel Kavramlar", "Sayı Basamakları", "Bölme ve Bölünebilme",
-        "EBOB - EKOK", "Rasyonel Sayılar", "Basit Eşitsizlikler", "Mutlak Değer",
-        "Üslü Sayılar", "Köklü Sayılar", "Çarpanlara Ayırma", "Oran - Orantı",
-        "Denklem Çözme", "Problemler", "Kümeler", "Fonksiyonlar", "Polinomlar",
-        "Permütasyon - Kombinasyon - Olasılık", "Veri ve İstatistik",
-        "Açılar ve Üçgenler", "Dörtgenler ve Çokgenler", "Çember ve Daire",
-        "Analitik Geometri", "Katı Cisimler",
+        "Sayılar",
+        "Sayı Basamakları",
+        "Bölme ve Bölünebilme",
+        "OBEB - OKEK",
+        "Rasyonel Sayılar",
+        "Basit Eşitsizlikler",
+        "Mutlak Değer",
+        "Üslü Sayılar",
+        "Köklü Sayılar",
+        "Çarpanlara Ayırma",
+        "Oran Orantı",
+        "Denklem Çözme",
+        "Problemler",
+        "Kümeler",
+        "Fonksiyonlar",
+        "Permütasyon",
+        "Kombinasyon",
+        "Binom",
+        "Olasılık",
+        "İstatistik",
+        "2. Dereceden Denklemler",
+        "Karmaşık Sayılar",
+        "Parabol",
+        "Polinomlar"
     ],
-    "t-tarih": [
-        "Tarih ve Zaman", "İnsanlığın İlk Dönemleri", "Orta Çağ'da Dünya",
-        "İlk ve Orta Çağlarda Türk Dünyası", "İslam Medeniyetinin Doğuşu",
-        "Türklerin İslamiyeti Kabulü", "Beylikten Devlete Osmanlı",
-        "Dünya Gücü Osmanlı", "Osmanlı'da Değişim", "Millî Mücadele", "Atatürkçülük",
-    ],
-    "t-cog": [
-        "Doğa ve İnsan", "Dünya'nın Şekli ve Hareketleri", "Harita Bilgisi",
-        "İklim Bilgisi", "İç ve Dış Kuvvetler", "Nüfus", "Göç", "Yerleşme",
-        "Ekonomik Faaliyetler", "Bölgeler", "Doğal Afetler",
-    ],
-    "t-felsefe": [
-        "Felsefeyi Tanıma", "Bilgi Felsefesi", "Varlık Felsefesi", "Ahlak Felsefesi",
-        "Sanat Felsefesi", "Din Felsefesi", "Siyaset Felsefesi", "Bilim Felsefesi",
-        "Psikoloji", "Sosyoloji", "Mantık",
-    ],
-    "t-din": [
-        "Bilgi ve İnanç", "İslam ve İbadet", "Ahlak ve Değerler", "Din ve Hayat",
-        "Hz. Muhammed", "Vahiy ve Akıl", "İslam Düşüncesinde Yorumlar", "Din ve Bilim",
+    "geometri": [
+        "Doğruda ve Üçgende Açılar",
+        "Dik ve Özel Üçgenler",
+        "Dik Üçgende Trigonometrik Bağıntılar",
+        "İkizkenar ve Eşkenar Üçgen",
+        "Üçgende Alanlar",
+        "Üçgende Açıortay Bağıntıları",
+        "Üçgende Kenarortay Bağıntıları",
+        "Üçgende Eşlik ve Benzerlik",
+        "Üçgende Açı-Kenar Bağıntıları",
+        "Çokgenler",
+        "Dörtgenler",
+        "Yamuk",
+        "Paralelkenar",
+        "Eşkenar Dörtgen - Deltoid",
+        "Dikdörtgen",
+        "Çemberde Açılar",
+        "Çemberde Uzunluk",
+        "Daire",
+        "Prizmalar",
+        "Piramitler",
+        "Küre",
+        "Koordinat Düzlemi ve Noktanın Analitiği",
+        "Vektörler",
+        "Doğrunun Analitiği",
+        "Tekrar Eden, Dönen ve Yansıyan Şekiller",
+        "Uzay Geometri",
+        "Dönüşümlerle Geometri",
+        "Trigonometri",
+        "Çemberin Analitiği",
+        "Genel Konik Tanımı",
+        "Parabol (Konik)",
+        "Elips",
+        "Hiperbol"
     ],
     "t-fizik": [
-        "Fizik Bilimine Giriş", "Madde ve Özellikleri", "Hareket ve Kuvvet",
-        "İş - Güç - Enerji", "Isı ve Sıcaklık", "Elektrostatik", "Elektrik Akımı",
-        "Manyetizma", "Basınç", "Kaldırma Kuvveti", "Dalgalar", "Optik",
+        "Fiziğin Tanımı ve Özellikleri",
+        "Fiziğin Alt Dalları",
+        "Fiziğin Diğer Disiplinlerle İlişkisi",
+        "Fiziksel Niceliklerin Sınıflandırılması",
+        "Madde ve Özkütle",
+        "Dayanıklılık",
+        "Adezyon ve Kohezyon",
+        "Hareket",
+        "Kuvvet",
+        "Newton'un Hareket Yasaları",
+        "Sürtünme Kuvveti",
+        "İş, Güç ve Enerji",
+        "Mekanik Enerji",
+        "Enerjinin Korunumu ve Dönüşümleri",
+        "Verim",
+        "Enerji Kaynakları",
+        "Isı ve Sıcaklık",
+        "Hal Değişimi",
+        "Isıl Denge",
+        "Enerji İletim Yolları",
+        "Genleşme",
+        "Elektrik Yükü",
+        "Elektrikle Yüklenme Çeşitleri",
+        "Elektroskop",
+        "İletken ve Yalıtkanlarda Yük Dağılımı",
+        "Topraklama",
+        "Coulomb Kuvveti",
+        "Elektrik Alanı",
+        "Elektrik Akımı, Potansiyel Farkı ve Direnç",
+        "Elektrik Devreleri",
+        "Mıknatıs ve Manyetik Alan",
+        "Akım ve Manyetik Alan",
+        "Basınç",
+        "Kaldırma Kuvveti",
+        "Temel Dalga Bilgileri",
+        "Yay Dalgası",
+        "Su Dalgası",
+        "Ses Dalgası",
+        "Deprem Dalgaları",
+        "Aydınlanma",
+        "Gölge",
+        "Yansıma",
+        "Düzlem Ayna",
+        "Kırılma",
+        "Mercekler",
+        "Prizmalar"
     ],
     "t-kimya": [
-        "Kimya Bilimi", "Atom ve Periyodik Sistem", "Kimyasal Türler Arası Etkileşimler",
-        "Maddenin Hâlleri", "Doğa ve Kimya", "Kimyanın Temel Kanunları", "Mol Kavramı",
-        "Karışımlar", "Asit - Baz - Tuz", "Kimya Her Yerde",
+        "Kimya Bilimi",
+        "Atom ve Yapısı",
+        "Periyodik Sistem",
+        "Kimyasal Türler Arası Etkileşimler",
+        "Asitler, Bazlar ve Tuzlar",
+        "Bileşikler",
+        "Kimyasal Tepkimeler",
+        "Kimyanın Temel Yasaları",
+        "Maddenin Halleri",
+        "Karışımlar",
+        "Endüstride ve Canlılarda Enerji",
+        "Kimya Her Yerde"
     ],
     "t-biyoloji": [
-        "Canlıların Ortak Özellikleri", "Canlıların Temel Bileşenleri", "Hücre",
-        "Madde Geçişleri", "Canlıların Sınıflandırılması", "Hücre Bölünmeleri",
-        "Kalıtım", "Ekosistem Ekolojisi",
+        "Biyoloji Bilimi, İnorganik Bileşikler",
+        "Organik Bileşikler",
+        "Hücre",
+        "Madde Geçişleri",
+        "DNA - RNA",
+        "Protein Sentezi",
+        "Enzimler",
+        "Canlıların Sınıflandırılması",
+        "Ekoloji",
+        "Hücre Bölünmeleri",
+        "Eşeysiz - Eşeyli Üreme",
+        "İnsanda Üreme ve Gelişme",
+        "Mendel Genetiği",
+        "Kan Grupları",
+        "Cinsiyete Bağlı Kalıtım",
+        "Biyoteknoloji ve Evrim",
+        "Solunum",
+        "Fotosentez",
+        "Kemosentez",
+        "Bitki Biyolojisi",
+        "Sistemler",
+        "Duyu Organları"
     ],
-    /* --- AYT --- */
+    "t-tarih": [
+        "Tarih Bilimine Giriş",
+        "Uygarlığın Doğuşu ve İlk Uygarlıklar",
+        "Eski Türk Tarihi",
+        "İslam Tarihi",
+        "Türk-İslam Devletleri (10-13. yy)",
+        "Türkiye Tarihi (11-13. yy)",
+        "Beylikten Devlete (1300-1453)",
+        "Dünya Gücü Osmanlı (1453-1600)",
+        "Yeniçağ Avrupası (1453-1789)",
+        "Osmanlı Kültür ve Medeniyeti",
+        "Arayış Yılları (17. yy)",
+        "18. Yüzyılda Değişim ve Diplomasi",
+        "Yakınçağ Avrupası",
+        "En Uzun Yüzyıl (1800-1922)",
+        "20. Yüzyıl Başlarında Osmanlı",
+        "1. Dünya Savaşı",
+        "Milli Mücadeleye Hazırlık Dönemi",
+        "Kurtuluş Savaşında Cepheler",
+        "Türk İnkılabı",
+        "Atatürkçülük ve Atatürk İlkeleri",
+        "Türk Dış Politikası"
+    ],
+    "t-cog": [
+        "Harita Bilgisi",
+        "Dünyanın Şekli ve Hareketleri",
+        "İklim Bilgisi",
+        "Türkiye'nin İklimi ve Yer Şekilleri",
+        "Yerin Şekillenmesi",
+        "İç ve Dış Kuvvetler",
+        "Toprak Tipleri",
+        "Nüfus",
+        "Ortak Payda: Bölge",
+        "Ulaşım Yolları",
+        "Çevre ve İnsan",
+        "Doğal Afetler"
+    ],
+    "t-felsefe": [
+        "Felsefenin Konusu ve Alanı",
+        "Bilgi Felsefesi",
+        "Varlık Felsefesi",
+        "Ahlak Felsefesi",
+        "Sanat Felsefesi",
+        "Din Felsefesi",
+        "Siyaset Felsefesi",
+        "Bilim Felsefesi"
+    ],
+    "t-din": [
+        "Kur'an ve Yorumu",
+        "Zekât",
+        "Hz. Muhammed'in Hayatı",
+        "İslam Düşüncesinde Yorumlar",
+        "İslam Dinine Göre Kötü Alışkanlıklar",
+        "İslam Düşüncesinde Tasavvuf",
+        "Vahiy ve Akıl",
+        "Yaşayan Dinler ve Benzer Özellikler",
+        "İnanç",
+        "İbadet",
+        "Ahlak ve Değerler",
+        "Din ve Laiklik",
+        "Din, Kültür ve Medeniyet"
+    ],
     "a-mat": [
-        "Fonksiyonlar", "Polinomlar", "İkinci Dereceden Denklemler", "Eşitsizlikler",
-        "Parabol", "Trigonometri", "Logaritma", "Diziler", "Limit ve Süreklilik",
-        "Türev", "İntegral", "Analitik Geometri", "Çember ve Daire",
-        "Katı Cisimler", "Permütasyon - Kombinasyon - Olasılık",
+        "Temel Kavramlar",
+        "Sayı Basamakları",
+        "Rasyonel Sayılar",
+        "Ondalıklı Sayılar",
+        "Basit Eşitsizlikler",
+        "Mutlak Değer",
+        "Üslü Sayılar",
+        "Köklü Sayılar",
+        "Çarpanlara Ayırma",
+        "Denklem Çözme",
+        "Oran - Orantı",
+        "Problemler",
+        "Fonksiyonlar",
+        "Kümeler",
+        "Permütasyon",
+        "Kombinasyon",
+        "Binom",
+        "Olasılık",
+        "İstatistik",
+        "2. Dereceden Denklemler",
+        "Karmaşık Sayılar",
+        "Parabol",
+        "Polinomlar",
+        "Mantık",
+        "Modüler Aritmetik",
+        "Eşitsizlikler",
+        "Logaritma",
+        "Diziler",
+        "Seriler",
+        "Limit ve Süreklilik",
+        "Türev",
+        "İntegral"
     ],
     "a-fizik": [
-        "Vektörler", "Bağıl Hareket", "Newton'un Hareket Yasaları", "Tork ve Denge",
-        "Basit Makineler", "İtme ve Momentum", "Elektrik Alan ve Potansiyel",
-        "Kondansatörler", "Manyetizma ve İndüksiyon", "Alternatif Akım",
-        "Çembersel Hareket", "Basit Harmonik Hareket", "Dalga Mekaniği",
-        "Atom Fiziği", "Modern Fizik",
+        "Kuvvet ve Hareket",
+        "Vektörler",
+        "Bağıl Hareket",
+        "Newton'un Hareket Yasaları",
+        "Bir Boyutta Sabit İvmeli Hareket",
+        "İki Boyutta Sabit İvmeli Hareket",
+        "Enerji ve Hareket",
+        "İtme ve Çizgisel Momentum",
+        "Tork",
+        "Denge",
+        "Basit Makineler",
+        "Elektriksel Kuvvet ve Elektrik Alanı",
+        "Elektriksel Potansiyel",
+        "Düzgün Elektrik Alanı ve Sığa",
+        "Manyetizma ve Elektromanyetik İndükleme",
+        "Alternatif Akım",
+        "Transformatörler",
+        "Düzgün Çembersel Hareket",
+        "Dönerek Öteleme Hareketi",
+        "Açısal Momentum",
+        "Kütle Çekimi ve Kepler Kanunu",
+        "Basit Harmonik Hareket",
+        "Dalgalarda Kırınım, Girişim ve Doppler",
+        "Elektromanyetik Dalgalar",
+        "Atom Kavramının Tarihsel Gelişimi",
+        "Büyük Patlama ve Evrenin Oluşumu",
+        "Radyoaktivite",
+        "Özel Görelilik",
+        "Kuantum Fiziğine Giriş",
+        "Fotoelektrik Olayı",
+        "Compton Saçılması ve De Broglie Dalga Boyu",
+        "Modern Fiziğin Teknolojideki Uygulamaları",
+        "Görüntüleme Teknolojileri",
+        "Yarı İletken Teknolojisi",
+        "Süper İletkenler",
+        "Nanoteknoloji",
+        "Lazer Işınları"
     ],
     "a-kimya": [
-        "Modern Atom Teorisi", "Gazlar", "Sıvı Çözeltiler ve Çözünürlük",
-        "Kimyasal Tepkimelerde Enerji", "Tepkimelerde Hız", "Kimyasal Denge",
-        "Asit - Baz Dengesi", "Çözünürlük Dengesi", "Elektrokimya",
-        "Organik Kimyaya Giriş", "Organik Bileşikler", "Enerji Kaynakları",
+        "Modern Atom Teorisi",
+        "Kimyasal Hesaplamalar",
+        "Gazlar",
+        "Sıvı Çözeltiler",
+        "Kimya ve Enerji",
+        "Tepkimelerde Hız",
+        "Kimyasal Denge",
+        "Sıvı Çözeltilerde Denge",
+        "Kimya ve Elektrik",
+        "Karbon Kimyasına Giriş",
+        "Organik Bileşikler",
+        "Hayatımızdaki Kimya"
     ],
     "a-biyoloji": [
-        "Sinir Sistemi", "Endokrin Sistem", "Duyu Organları", "Destek ve Hareket",
-        "Sindirim Sistemi", "Dolaşım Sistemi", "Solunum Sistemi", "Boşaltım Sistemi",
-        "Üreme ve Gelişme", "Komünite Ekolojisi", "Popülasyon Ekolojisi",
-        "Genden Proteine", "Canlılarda Enerji Dönüşümleri", "Bitki Biyolojisi",
+        "Biyoloji Bilimi, İnorganik Bileşikler",
+        "Organik Bileşikler",
+        "Hücre",
+        "Madde Geçişleri",
+        "DNA - RNA",
+        "Protein Sentezi",
+        "Enzimler",
+        "Canlıların Sınıflandırılması",
+        "Ekoloji",
+        "Hücre Bölünmeleri",
+        "Eşeysiz - Eşeyli Üreme",
+        "İnsanda Üreme ve Gelişme",
+        "Mendel Genetiği",
+        "Kan Grupları",
+        "Cinsiyete Bağlı Kalıtım",
+        "Biyoteknoloji ve Evrim",
+        "Solunum",
+        "Fotosentez",
+        "Kemosentez",
+        "Bitki Biyolojisi",
+        "Sistemler",
+        "Duyu Organları"
     ],
     "a-tde": [
-        "Anlam Bilgisi", "Şiir Bilgisi", "Edebî Sanatlar", "İslamiyet Öncesi Türk Edebiyatı",
-        "Halk Edebiyatı", "Divan Edebiyatı", "Tanzimat Edebiyatı", "Servet-i Fünûn",
-        "Fecr-i Âti", "Millî Edebiyat", "Cumhuriyet Dönemi Edebiyatı", "Dünya Edebiyatı",
+        "Sözcükte Anlam",
+        "Cümlede Anlam",
+        "Paragrafta Anlatım ve Düşünceyi Geliştirme Yolları",
+        "Paragrafta Yapı",
+        "Paragrafta Anlam",
+        "Ses Bilgisi",
+        "Yazım Kuralları",
+        "Noktalama İşaretleri",
+        "Sözcükte Yapı",
+        "Ad Soylu Sözcükler",
+        "Fiil",
+        "Cümlenin Ögeleri",
+        "Cümle Türleri",
+        "Anlatım Bozuklukları",
+        "Güzel Sanatlar ve Edebiyat",
+        "Metinlerin Sınıflandırılması",
+        "Coşku ve Heyecanı Dile Getiren Metinler",
+        "Şiir Bilgisi",
+        "Öğretici Metinler",
+        "Sözlü Anlatım Türleri",
+        "Edebi Sanatlar",
+        "Nazım Biçimleri ve Türleri",
+        "İslamiyet Öncesi Türk Edebiyatı",
+        "İslami Dönem İlk Dil ve Edebiyat Ürünleri",
+        "Oğuz Türkçesinin İlk Ürünleri",
+        "Halk Edebiyatı",
+        "Divan Edebiyatı",
+        "Tanzimat Edebiyatı",
+        "Servet-i Fünun Edebiyatı",
+        "Fecr-i Âti Edebiyatı",
+        "Milli Edebiyat",
+        "Cumhuriyet Dönemi Türk Edebiyatı",
+        "Türkiye Dışındaki Türk Edebiyatı",
+        "Edebi Akımlar",
+        "Dünya Edebiyatı",
+        "Türk Edebiyatı Eser Özetleri",
+        "Türk ve Dünya Edebiyatındaki İlkler"
     ],
     "a-tarih1": [
-        "Tarih ve Zaman", "İnsanlığın İlk Dönemleri", "Orta Çağ'da Dünya",
-        "İlk ve Orta Çağlarda Türk Dünyası", "İslam Medeniyetinin Doğuşu",
-        "Türklerin İslamiyeti Kabulü", "Yerleşme ve Devletleşme", "Beylikten Devlete",
-    ],
-    "a-cog1": [
-        "Ekosistem ve Biyoçeşitlilik", "Nüfus Politikaları", "Şehirler ve Etki Alanları",
-        "Ekonomik Faaliyetler", "Türkiye'nin İşlevsel Bölgeleri", "Doğal Afetler",
+        "Tarih Bilimi",
+        "Uygarlığın Doğuşu ve İlk Uygarlıklar",
+        "İlk Türk Devletleri",
+        "İslam Tarihi ve Uygarlığı",
+        "Türk-İslam Devletleri",
+        "Türkiye Tarihi",
+        "Beylikten Devlete (1300-1453)",
+        "Dünya Gücü: Osmanlı Devleti (1453-1600)",
+        "Arayış Yılları (17. Yüzyıl)",
+        "Avrupa ve Osmanlı Devleti (18. Yüzyıl)",
+        "En Uzun Yüzyıl (1800-1922)",
+        "1881'den 1919'a Mustafa Kemal",
+        "1. Dünya Savaşı",
+        "Milli Mücadele'nin Hazırlık Dönemi",
+        "Kurtuluş Savaşı'nda Cepheler",
+        "Türk İnkılabı",
+        "Atatürkçülük ve Atatürk İlkeleri",
+        "Atatürk Dönemi Türk Dış Politikası",
+        "Atatürk'ün Ölümü",
+        "Yüzyılın Başlarında Dünya",
+        "İkinci Dünya Savaşı",
+        "Soğuk Savaş Dönemi",
+        "Yumuşama Dönemi ve Sonrası",
+        "Küreselleşen Dünya",
+        "Türklerde Devlet Teşkilatı",
+        "Türklerde Toplum Yapısı",
+        "Türklerde Hukuk",
+        "Türklerde Ekonomi",
+        "Türklerde Eğitim",
+        "Türklerde Sanat"
     ],
     "a-tarih2": [
-        "Değişen Dünya Dengeleri", "Osmanlı'da Değişim", "Uluslararası İlişkilerde Denge",
-        "Devrimler Çağı", "Sermaye ve Emek", "20. Yüzyıl Başlarında Dünya",
-        "Millî Mücadele", "Atatürkçülük ve İnkılaplar", "İkinci Dünya Savaşı",
-        "Soğuk Savaş Dönemi", "Küreselleşen Dünya",
+        "Tarih Bilimi",
+        "Uygarlığın Doğuşu ve İlk Uygarlıklar",
+        "İlk Türk Devletleri",
+        "İslam Tarihi ve Uygarlığı",
+        "Türk-İslam Devletleri",
+        "Türkiye Tarihi",
+        "Beylikten Devlete (1300-1453)",
+        "Dünya Gücü: Osmanlı Devleti (1453-1600)",
+        "Arayış Yılları (17. Yüzyıl)",
+        "Avrupa ve Osmanlı Devleti (18. Yüzyıl)",
+        "En Uzun Yüzyıl (1800-1922)",
+        "1881'den 1919'a Mustafa Kemal",
+        "1. Dünya Savaşı",
+        "Milli Mücadele'nin Hazırlık Dönemi",
+        "Kurtuluş Savaşı'nda Cepheler",
+        "Türk İnkılabı",
+        "Atatürkçülük ve Atatürk İlkeleri",
+        "Atatürk Dönemi Türk Dış Politikası",
+        "Atatürk'ün Ölümü",
+        "Yüzyılın Başlarında Dünya",
+        "İkinci Dünya Savaşı",
+        "Soğuk Savaş Dönemi",
+        "Yumuşama Dönemi ve Sonrası",
+        "Küreselleşen Dünya",
+        "Türklerde Devlet Teşkilatı",
+        "Türklerde Toplum Yapısı",
+        "Türklerde Hukuk",
+        "Türklerde Ekonomi",
+        "Türklerde Eğitim",
+        "Türklerde Sanat"
+    ],
+    "a-cog1": [
+        "Doğa ve İnsan",
+        "Dünya'nın Şekli ve Hareketleri",
+        "Coğrafi Konum",
+        "Harita Bilgisi",
+        "İklim Bilgisi",
+        "Yerin Şekillenmesi",
+        "Doğanın Varlıkları",
+        "Beşeri Yapı",
+        "Nüfusun Gelişimi, Dağılışı ve Niteliği",
+        "Göçlerin Nedenleri ve Sonuçları",
+        "Geçim Tarzları",
+        "Türkiye'nin Yeryüzü Şekilleri ve Özellikleri",
+        "Türkiye İklimi ve Özellikleri",
+        "Türkiye'nin Doğal Varlıkları",
+        "Türkiye'de Yerleşme, Nüfus ve Göç",
+        "Bölge Türleri ve Sınırları",
+        "Konum ve Etkileşim",
+        "Coğrafi Keşifler",
+        "Doğa ile İnsan Arasındaki Etkileşim",
+        "Doğal Afetler",
+        "Ekonomik Faaliyetler"
     ],
     "a-cog2": [
-        "Biyoçeşitlilik", "Ekosistemler", "Nüfus Politikaları", "Türkiye'de Nüfus",
-        "Şehirleşme", "Türkiye Ekonomisi", "Türkiye'nin Bölgeleri", "Ulaşım",
-        "Ticaret ve Turizm", "Çevre Sorunları", "Küresel Ortam",
+        "Doğa ve İnsan",
+        "Dünya'nın Şekli ve Hareketleri",
+        "Coğrafi Konum",
+        "Harita Bilgisi",
+        "İklim Bilgisi",
+        "Yerin Şekillenmesi",
+        "Doğanın Varlıkları",
+        "Beşeri Yapı",
+        "Nüfusun Gelişimi, Dağılışı ve Niteliği",
+        "Göçlerin Nedenleri ve Sonuçları",
+        "Geçim Tarzları",
+        "Türkiye'nin Yeryüzü Şekilleri ve Özellikleri",
+        "Türkiye İklimi ve Özellikleri",
+        "Türkiye'nin Doğal Varlıkları",
+        "Türkiye'de Yerleşme, Nüfus ve Göç",
+        "Bölge Türleri ve Sınırları",
+        "Konum ve Etkileşim",
+        "Coğrafi Keşifler",
+        "Doğa ile İnsan Arasındaki Etkileşim",
+        "Doğal Afetler",
+        "Ekonomik Faaliyetler"
     ],
     "a-felsefe": [
-        "Bilgi Felsefesi", "Varlık Felsefesi", "Ahlak Felsefesi", "Sanat Felsefesi",
-        "Din Felsefesi", "Siyaset Felsefesi", "Bilim Felsefesi", "Psikoloji",
-        "Sosyoloji", "Mantık",
+        "Felsefenin Alanı",
+        "Bilgi Felsefesi",
+        "Bilim Felsefesi",
+        "Varlık Felsefesi",
+        "Ahlak Felsefesi",
+        "Siyaset Felsefesi",
+        "Sanat Felsefesi",
+        "Din Felsefesi",
+        "Mantığa Giriş",
+        "Klasik Mantık",
+        "Mantık ve Dil",
+        "Sembolik Mantık",
+        "Psikoloji Bilimini Tanıyalım",
+        "Psikolojinin Temel Süreçleri",
+        "Öğrenme, Bellek, Düşünme",
+        "Ruh Sağlığının Temelleri",
+        "Sosyolojiye Giriş",
+        "Birey ve Toplum",
+        "Toplumsal Yapı",
+        "Toplumsal Değişme ve Gelişme",
+        "Toplum ve Kültür",
+        "Toplumsal Kurumlar"
     ],
     "a-din": [
-        "İslam ve Bilim", "Anadolu'da İslam", "İslam Düşüncesinde Tasavvufi Yorumlar",
-        "Güncel Dinî Meseleler", "Hint ve Çin Dinleri", "Yahudilik ve Hristiyanlık",
+        "Kur'an-ı Kerim'in Anlaşılması ve Kavranması",
+        "İnsan ve Din",
+        "İslam ve İbadetler",
+        "İslam Düşüncesinde Yorumlar, Mezhepler",
+        "Hz. Muhammed'in Hayatı, Örnekliği ve Onu Anlama",
+        "İslam ve Bilim, Estetik, Barış",
+        "Yaşayan Dinler ve Benzer Özellikleri"
     ],
     "a-ydt": [
-        "Kelime Bilgisi", "Tenses", "Modals", "Passive Voice", "Relative Clauses",
-        "Noun Clauses", "Conditionals", "Cloze Test", "Cümle Tamamlama", "Çeviri",
-        "Paragraf", "Diyalog Tamamlama", "Anlamca Yakın Cümle", "Anlatım Akışı",
-    ],
+        "Kelime Bilgisi",
+        "Tenses",
+        "Modals",
+        "Passive Voice",
+        "Relative Clauses",
+        "Noun Clauses",
+        "Conditionals",
+        "Gerunds and Infinitives",
+        "Cloze Test",
+        "Cümle Tamamlama",
+        "Çeviri",
+        "Paragraf",
+        "Diyalog Tamamlama",
+        "Anlamca Yakın Cümle",
+        "Anlatım Akışı",
+        "Anlatım Akışını Bozan Cümle"
+    ]
 };
 const konuKaynak = (o) => (o.seviye === "yks" ? KONULAR_YKS : KONULAR_LGS);
 const STORAGE_KEY = "derbent-lgs-v3";
@@ -272,11 +701,104 @@ const SITE = "derbentlgs.github.io";
 const KOC = "Fatma Nur ÜNAL";
 /* Logo: dosya adresini veya data URL'yi buraya yapıştırın. */
 const LOGO_URL = "data:image/png;base64,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";
-const ASAMALAR = ["İşlendi", "1. Tekrar", "2. Tekrar", "3. Tekrar"];
+const ASAMALAR = ["İşlendi", "1 Gün", "1 Hafta", "1 Ay", "3 Ay", "6 Ay"];
+/* Aralıklı tekrar: konu işlendikten kaç gün sonra */
+const TEKRAR_ARALIK = [1, 7, 30, 90, 180];
+const TEKRAR_AD = ["1 gün sonra", "1 hafta sonra", "1 ay sonra", "3 ay sonra", "6 ay sonra"];
+const TEKRAR_KISA = ["1G", "1H", "1A", "3A", "6A"];
+const TEKRAR_SURE = 15;
 const GUNLER = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
 const GUN_KISA = ["PZT", "SAL", "ÇAR", "PER", "CUM", "CMT", "PAZ"];
-const GOREV_SAYISI = 10;
-const bugunIndeks = () => (new Date().getDay() + 6) % 7;
+const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+    "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+const SAAT_BAS = 7, SAAT_SON = 24, SAAT_YUK = 52;
+const SURE_SECENEK = [15, 30, 45, 60, 90, 120];
+/* Ders renkleri — takvimde ayırt etmek için */
+const DERS_RENK = {
+    turkce: "#D9534F", matematik: "#2F6FB5", fen: "#0E8FA3",
+    inkilap: "#B9722C", ingilizce: "#B8508F", din: "#2D8577",
+    "t-turkce": "#D9534F", "t-mat": "#2F6FB5", geometri: "#6A5AC0",
+    "t-fizik": "#0E8FA3", "t-kimya": "#1B9A6E", "t-biyoloji": "#57A32B",
+    "t-tarih": "#B9722C", "t-cog": "#C9971B", "t-felsefe": "#8A56A8",
+    "t-din": "#2D8577",
+    "a-mat": "#2F6FB5", "a-fizik": "#0E8FA3", "a-kimya": "#1B9A6E",
+    "a-biyoloji": "#57A32B", "a-tde": "#D9534F", "a-tarih1": "#B9722C",
+    "a-tarih2": "#A85F20", "a-cog1": "#C9971B", "a-cog2": "#B08512",
+    "a-felsefe": "#8A56A8", "a-din": "#2D8577", "a-ydt": "#B8508F",
+};
+const dersRenk = (id) => DERS_RENK[id] || "#6C8A93";
+const tarihEkle = (iso, gun) => {
+    const d = new Date(iso + "T12:00:00");
+    d.setDate(d.getDate() + gun);
+    return d.toISOString().slice(0, 10);
+};
+const haftaBasiTarih = (iso) => {
+    const d = new Date(iso + "T12:00:00");
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return d.toISOString().slice(0, 10);
+};
+const haftaGunleri = (iso) => {
+    const b = haftaBasiTarih(iso);
+    return Array.from({ length: 7 }, (_, i) => tarihEkle(b, i));
+};
+const gunIndeksi = (iso) => (new Date(iso + "T12:00:00").getDay() + 6) % 7;
+const kisaTarih = (iso) => {
+    const [, a, g] = iso.split("-");
+    return `${Number(g)} ${AYLAR[Number(a) - 1]}`;
+};
+const bugunIndeks = () => gunIndeksi(bugun());
+const saatDakika = (s) => {
+    if (!s)
+        return null;
+    const [a, d] = s.split(":").map(Number);
+    return a * 60 + (d || 0);
+};
+/* Görev listesi yardımcıları */
+const gorevleriAl = (o) => (Array.isArray(o.gorevler) ? o.gorevler : []);
+const gunGorevleri = (o, tarih) => gorevleriAl(o)
+    .filter((g) => g.tarih === tarih)
+    .sort((a, b) => {
+    const sa = saatDakika(a.saat), sb = saatDakika(b.saat);
+    if (sa === null && sb === null)
+        return a.tip === b.tip ? 0 : a.tip === "calisma" ? -1 : 1;
+    if (sa === null)
+        return -1;
+    if (sb === null)
+        return 1;
+    return sa - sb;
+});
+const gorevSayim = (o, tarihler) => {
+    const k = new Set(tarihler);
+    const l = gorevleriAl(o).filter((g) => k.has(g.tarih));
+    return { toplam: l.length, biten: l.filter((g) => g.tamam).length };
+};
+/* Bir çalışma görevinden 5 kademeli tekrar üretir */
+const tekrarUret = (kok) => TEKRAR_ARALIK.map((gun, i) => ({
+    id: `${kok.id}-t${i}`,
+    kokId: kok.id,
+    tarih: tarihEkle(kok.tarih, gun),
+    saat: "", sure: TEKRAR_SURE,
+    ders: kok.ders, konu: kok.konu,
+    tip: "tekrar", kademe: i, tamam: false,
+}));
+/* Eski 7 günlük program verisini tarihli görevlere çevirir */
+const programGoc = (program) => {
+    if (!Array.isArray(program))
+        return [];
+    const hb = haftaBasi();
+    const cikti = [];
+    program.forEach((gun, gi) => {
+        (gun || []).forEach((g, i) => {
+            cikti.push({
+                id: g.id || `g${Date.now()}-${gi}-${i}`,
+                tarih: tarihEkle(hb, gi), saat: "", sure: 45,
+                ders: g.ders, konu: g.konu, tip: "calisma",
+                kademe: null, tamam: !!g.tamam,
+            });
+        });
+    });
+    return cikti;
+};
 /* ================================================================== */
 /*  YARDIMCILAR                                                        */
 /* ================================================================== */
@@ -334,70 +856,6 @@ const konulariTamamla = (o) => {
     });
     return cikti;
 };
-const yeniProgram = () => Array.from({ length: 7 }, () => []);
-const programSayim = (program) => {
-    const p = Array.isArray(program) ? program : yeniProgram();
-    return {
-        toplam: p.reduce((a, g) => a + g.length, 0),
-        biten: p.reduce((a, g) => a + g.filter((x) => x.tamam).length, 0),
-    };
-};
-/* --- seri (aralıksız çalışma günü) --- */
-const seriHesapla = (kayitlar) => {
-    const gunler = new Set(kayitlar.map((k) => k.tarih));
-    const gun = (d) => d.toISOString().slice(0, 10);
-    let simdi = 0;
-    const d = new Date(bugun());
-    if (!gunler.has(gun(d)))
-        d.setDate(d.getDate() - 1);
-    while (gunler.has(gun(d))) {
-        simdi++;
-        d.setDate(d.getDate() - 1);
-    }
-    const sirali = [...gunler].sort();
-    let enUzun = 0, sayac = 0, onceki = null;
-    sirali.forEach((t) => {
-        if (onceki) {
-            const fark = (new Date(t) - new Date(onceki)) / 86400000;
-            sayac = fark === 1 ? sayac + 1 : 1;
-        }
-        else
-            sayac = 1;
-        if (sayac > enUzun)
-            enUzun = sayac;
-        onceki = t;
-    });
-    const son14 = Array.from({ length: 14 }, (_, i) => {
-        const t = new Date(bugun());
-        t.setDate(t.getDate() - (13 - i));
-        return { tarih: gun(t), var: gunler.has(gun(t)) };
-    });
-    return { simdi, enUzun, son14 };
-};
-/* Seri seviyesi: 0 kırmızı → 4 mavi */
-const seriSeviye = (g) => (g === 0 ? 0 : g < 3 ? 1 : g < 7 ? 2 : g < 14 ? 3 : 4);
-/* --- boş bırakma --- */
-const bosAnaliz = (o, denemeler) => {
-    const ders = {};
-    let toplamSoru = 0, toplamBos = 0;
-    denemeler.forEach((d) => {
-        denemeDersleri(o, d.tur).forEach((x) => {
-            var _a, _b;
-            const dg = Number(((_a = d[x.id]) === null || _a === void 0 ? void 0 : _a.d) || 0), yn = Number(((_b = d[x.id]) === null || _b === void 0 ? void 0 : _b.y) || 0);
-            const bos = Math.max(x.denemeSoru - dg - yn, 0);
-            if (!ders[x.id])
-                ders[x.id] = { ders: x, soru: 0, bos: 0 };
-            ders[x.id].soru += x.denemeSoru;
-            ders[x.id].bos += bos;
-            toplamSoru += x.denemeSoru;
-            toplamBos += bos;
-        });
-    });
-    const liste = Object.values(ders)
-        .map((x) => (Object.assign(Object.assign({}, x), { oran: x.soru ? x.bos / x.soru : 0 })))
-        .sort((a, b) => b.oran - a.oran);
-    return { liste, oran: toplamSoru ? toplamBos / toplamSoru : 0, toplamBos, toplamSoru };
-};
 const istHesapla = (kayitlar) => {
     const topla = (l) => l.reduce((a, x) => a + Number(x.soru), 0);
     const hb = haftaBasi(), ab = ayBasi(), bg = bugun();
@@ -449,14 +907,14 @@ const demoOgrenci = (cfg) => {
         id: `o-${cfg.ad.replace(/\s/g, "")}`, kod: kodUret(),
         ad: cfg.ad, sinif: cfg.sinif, seviye: cfg.seviye, alan: cfg.alan,
         hedefLise: cfg.kurum, hedefDilim: cfg.olcut, haftalikHedef: cfg.hedef,
-        kayitlar: [], konular: {}, denemeler: [], kitaplar: [], program: yeniProgram(),
+        kayitlar: [], konular: {}, denemeler: [], kitaplar: [], gorevler: [],
     };
     const dl = dersleriGetir(o);
     const kaynak = konuKaynak(o);
     o.konular = yeniKonular(o);
     dl.forEach((d, di) => {
         o.konular[d.id].forEach((k, i) => {
-            k.asama = Math.max(0, Math.min(4, ((i + di * 2) % 6) - (cfg.yogunluk > 0.6 ? 0 : 1)));
+            k.asama = Math.max(0, Math.min(6, ((i + di * 2) % 8) - (cfg.yogunluk > 0.6 ? 0 : 2)));
         });
     });
     if (cfg.yogunluk > 0) {
@@ -475,16 +933,21 @@ const demoOgrenci = (cfg) => {
                 });
             }
         }
-        o.program.forEach((gun, gi) => {
-            const adet = Math.max(2, Math.round(cfg.yogunluk * 4) - (gi > 4 ? 1 : 0));
+        const hb = haftaBasi();
+        [0, 1, 2, 3, 4, 5].forEach((gi) => {
+            const adet = Math.max(1, Math.round(cfg.yogunluk * 3) - (gi > 4 ? 1 : 0));
             for (let i = 0; i < adet; i++) {
                 const d = dl[(gi + i) % dl.length];
                 const kl = kaynak[d.id] || ["Genel tekrar"];
-                gun.push({
-                    id: `${cfg.ad}-p${gi}-${i}`, ders: d.id,
-                    konu: kl[(gi * 2 + i) % kl.length],
+                const kok = {
+                    id: `${cfg.ad}-g${gi}-${i}`, tarih: tarihEkle(hb, gi),
+                    saat: ["16:00", "17:30", "19:00", "20:30"][i % 4],
+                    sure: [45, 60, 30][i % 3],
+                    ders: d.id, konu: kl[(gi * 2 + i) % kl.length],
+                    tip: "calisma", kademe: null,
                     tamam: gi < bugunIndeks() ? (gi + i) % 4 !== 0 : false,
-                });
+                };
+                o.gorevler.push(kok, ...tekrarUret(kok));
             }
         });
     }
@@ -604,6 +1067,15 @@ const gorselKucult = (dosya, enBoy = 440) => new Promise((coz, hata) => {
     };
     okuyucu.readAsDataURL(dosya);
 });
+/* --- kaynaklar --- */
+const KAYNAK_SINIR = 5;
+/* Ders hangi gruba ait: TYT / AYT / LGS'de tek grup */
+const dersGrubu = (o, dersId) => {
+    if (!o || o.seviye !== "yks")
+        return "lgs";
+    return String(dersId).startsWith("a-") ? "ayt" : "tyt";
+};
+const kaynaklariAl = (o, grup) => (o.kaynaklar || []).filter((k) => k.grup === grup);
 /* --- video --- */
 const videoKimlik = (url) => {
     if (!url)
@@ -712,9 +1184,9 @@ function DerbentLgs() {
                     const p = JSON.parse(s.value);
                     if ((_a = p.ogrenciler) === null || _a === void 0 ? void 0 : _a.length) {
                         p.ogrenciler = p.ogrenciler.map((o) => {
-                            const t = Object.assign({ seviye: "lgs", alan: "say", mesajlar: [], gorusmeler: [] }, o);
-                            return Object.assign(Object.assign({}, t), { konular: konulariTamamla(t), program: Array.isArray(t.program) && t.program.length === 7
-                                    ? t.program : yeniProgram() });
+                            const t = Object.assign({ seviye: "lgs", alan: "say", mesajlar: [], gorusmeler: [], kaynaklar: [] }, o);
+                            return Object.assign(Object.assign({}, t), { konular: konulariTamamla(t), gorevler: Array.isArray(t.gorevler)
+                                    ? t.gorevler : programGoc(t.program) });
                         });
                         setVeri(p);
                     }
@@ -784,17 +1256,17 @@ function DerbentLgs() {
             React.createElement("span", { className: "demo-a" }, "DEMO G\u00D6R\u00DCN\u00DCM\u00DC"),
             React.createElement("div", { className: "demo-d" }, [["yonetici", "Koç"], ["ogrenci", "Öğrenci"], ["veli", "Veli"]].map(([r, a]) => (React.createElement("button", { key: r, onClick: () => rolDegistir(r), className: rol === r ? "demo-b etkin" : "demo-b" }, a))))),
         salt && React.createElement("div", { className: "uyari" }, "Bu ekran salt okunur. Veli yaln\u0131zca izler."),
-        React.createElement("main", { className: "govde" }, mesajAcik && secili ? (React.createElement(Mesajlar, { o: secili, set: (y) => ogrGuncelle(secili.id, y), rol: rol })) : panelde ? (React.createElement(Panel, { veri: veri, kaydet: kaydet, setSeciliId: setSeciliId, setMesajAcik: setMesajAcik, rol: rol })) : !secili ? (React.createElement(Bos, { baslik: "\u00D6\u011Frenci yok", metin: "Ko\u00E7 panelinden \u00F6\u011Frenci ekleyin." })) : (React.createElement(React.Fragment, null,
+        !panelde && secili && !mesajAcik && (React.createElement("nav", { className: "alt" }, [["ozet", "Özet"], ["program", "Plan"], ["soru", "Soru"],
+            ["konu", "Konu"], ["deneme", "Deneme"], ["analiz", "Analiz"],
+            ["kitap", "Kitap"]].map(([id, ad]) => (React.createElement("button", { key: id, onClick: () => setSekme(id), className: sekme === id ? "alt-b etkin" : "alt-b" }, ad))))),
+        React.createElement("main", { className: panelde ? "govde panel-govde" : "govde" }, mesajAcik && secili ? (React.createElement(Mesajlar, { o: secili, set: (y) => ogrGuncelle(secili.id, y), rol: rol })) : panelde ? (React.createElement(Panel, { veri: veri, kaydet: kaydet, setSeciliId: setSeciliId, setMesajAcik: setMesajAcik, rol: rol })) : !secili ? (React.createElement(Bos, { baslik: "\u00D6\u011Frenci yok", metin: "Ko\u00E7 panelinden \u00F6\u011Frenci ekleyin." })) : (React.createElement(React.Fragment, null,
             sekme === "ozet" && React.createElement(Ozet, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc, rol: rol }),
-            sekme === "program" && React.createElement(Program, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc }),
+            sekme === "program" && React.createElement(Takvim, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc, rol: rol, sablonlar: veri.sablonlar || [], setSablonlar: (l) => kaydet(Object.assign(Object.assign({}, veri), { sablonlar: l })) }),
             sekme === "soru" && React.createElement(Soru, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt }),
             sekme === "konu" && React.createElement(Konu, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc }),
             sekme === "deneme" && React.createElement(Deneme, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt }),
             sekme === "analiz" && React.createElement(Analiz, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc }),
             sekme === "kitap" && React.createElement(Kitap, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt })))),
-        !panelde && secili && !mesajAcik && (React.createElement("nav", { className: "alt" }, [["ozet", "Özet"], ["program", "Plan"], ["soru", "Soru"],
-            ["konu", "Konu"], ["deneme", "Deneme"], ["analiz", "Analiz"],
-            ["kitap", "Kitap"]].map(([id, ad]) => (React.createElement("button", { key: id, onClick: () => setSekme(id), className: sekme === id ? "alt-b etkin" : "alt-b" }, ad))))),
         React.createElement(VideoOynatici, { video: video, kapat: () => setVideo(null) })));
 }
 /* ================================================================== */
@@ -841,7 +1313,7 @@ function Panel({ veri, kaydet, setSeciliId, setMesajAcik, rol }) {
             hedefLise: f.hedefLise || "Belirlenmedi",
             hedefDilim: f.hedefDilim || "",
             haftalikHedef: Number(f.haftalikHedef) || 300,
-            kayitlar: [], denemeler: [], kitaplar: [], program: yeniProgram(),
+            kayitlar: [], denemeler: [], kitaplar: [], gorevler: [], kaynaklar: [],
         };
         taslak.konular = yeniKonular(taslak);
         kaydet(Object.assign(Object.assign({}, veri), { ogrenciler: [...veri.ogrenciler, taslak] }));
@@ -860,7 +1332,7 @@ function Panel({ veri, kaydet, setSeciliId, setMesajAcik, rol }) {
         const dl = dersleriGetir(o);
         const tumKonu = dl.reduce((a, d) => { var _a; return a + (((_a = o.konular[d.id]) === null || _a === void 0 ? void 0 : _a.length) || 0); }, 0);
         const bitenKonu = dl.reduce((a, d) => { var _a; return a + (((_a = o.konular[d.id]) === null || _a === void 0 ? void 0 : _a.filter((k) => k.asama >= 1).length) || 0); }, 0);
-        const ps = programSayim(o.program);
+        const ps = gorevSayim(o, haftaGunleri(bugun()));
         const kt = sonKitapBul(o);
         const satirlar = [
             `📚 ${o.ad} — Haftalık Rapor`,
@@ -1007,7 +1479,6 @@ function Panel({ veri, kaydet, setSeciliId, setMesajAcik, rol }) {
 /*  1. ÖZET                                                            */
 /* ================================================================== */
 function Ozet({ o, set, salt, videoAc, rol }) {
-    var _a;
     const [duzenle, setDuzenle] = useState(false);
     const [gorselHata, setGorselHata] = useState("");
     const gorselSec = async (e) => {
@@ -1030,7 +1501,7 @@ function Ozet({ o, set, salt, videoAc, rol }) {
     const oran = ist.hafta / hedef;
     const et = etiketler(o);
     const kitap = sonKitapBul(o);
-    const bugunGorev = (((_a = o.program) === null || _a === void 0 ? void 0 : _a[bugunIndeks()]) || []);
+    const bugunGorev = gunGorevleri(o, bugun());
     const dl = dersleriGetir(o);
     const denemeKarti = (tur, baslik) => {
         const d = sonDenemeBul(o, tur);
@@ -1210,99 +1681,250 @@ function Gorusmeler({ o, set, rol }) {
 /* ================================================================== */
 /*  2. HAFTALIK PROGRAM                                                */
 /* ================================================================== */
-function Program({ o, set, salt, videoAc }) {
-    const [gun, setGun] = useState(bugunIndeks());
-    const [ekle, setEkle] = useState(false);
+function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
+    var _a;
     const dl = dersleriGetir(o);
-    const [ders, setDers] = useState(dl[0].id);
-    const program = Array.isArray(o.program) && o.program.length === 7
-        ? o.program : yeniProgram();
-    const liste = program[gun] || [];
-    const { toplam, biten } = programSayim(program);
-    const ayirici = o.seviye === "yks" ? DERSLER_TYT.length : 0;
-    const yaz = (yeniListe) => set({ program: program.map((g, i) => (i === gun ? yeniListe : g)) });
-    const gorevEkle = (konuAdi) => {
-        if (liste.length >= GOREV_SAYISI)
-            return;
-        yaz([...liste, { id: Date.now(), ders, konu: konuAdi, tamam: false }]);
-        setEkle(false);
+    const koc = rol === "yonetici";
+    const [gorunum, setGorunum] = useState("hafta");
+    const [odak, setOdak] = useState(bugun());
+    const [secili, setSecili] = useState(null);
+    const [ekleAcik, setEkleAcik] = useState(false);
+    const [sablonAcik, setSablonAcik] = useState(false);
+    const [mesaj, setMesaj] = useState("");
+    const bosForm = {
+        ders: dl[0].id, konu: "", tarih: bugun(), saat: "", sure: 45, tekrar: true,
     };
-    const degistir = (id) => {
+    const [f, setF] = useState(bosForm);
+    const gorevler = gorevleriAl(o);
+    const hafta = useMemo(() => haftaGunleri(odak), [odak]);
+    const haftaSayim = useMemo(() => gorevSayim(o, hafta), [o.gorevler, hafta]);
+    const seciliGorev = gorevler.find((g) => g.id === secili) || null;
+    const yaz = (liste) => set({ gorevler: liste });
+    /* --- ekleme --- */
+    const gorevEkle = () => {
+        if (!f.konu.trim())
+            return;
+        const kok = {
+            id: `g${Date.now()}`, tarih: f.tarih, saat: f.saat,
+            sure: Number(f.sure) || 45, ders: f.ders, konu: f.konu.trim(),
+            tip: "calisma", kademe: null, tamam: false,
+        };
+        const yeni = f.tekrar ? [kok, ...tekrarUret(kok)] : [kok];
+        yaz([...gorevler, ...yeni]);
+        setF(Object.assign(Object.assign({}, bosForm), { ders: f.ders, tarih: f.tarih }));
+        setEkleAcik(false);
+        setMesaj(f.tekrar
+            ? `"${kok.konu}" eklendi · 5 tekrar otomatik planlandı`
+            : `"${kok.konu}" eklendi`);
+    };
+    /* --- tamamlama: konu takibini de günceller --- */
+    const tamamla = (g) => {
         if (salt)
             return;
-        yaz(liste.map((g) => (g.id === id ? Object.assign(Object.assign({}, g), { tamam: !g.tamam }) : g)));
-    };
-    const sil = (id) => yaz(liste.filter((g) => g.id !== id));
-    /* Kaldığı bölümden başlatır, izlendi işaretini konuya yazar */
-    const videoIzle = (dersId, vd) => {
-        const i = sonrakiBolum(vd.liste);
-        if (!vd.liste[i] || !vd.liste[i].url)
+        const yeniDurum = !g.tamam;
+        yaz(gorevler.map((x) => (x.id === g.id ? Object.assign(Object.assign({}, x), { tamam: yeniDurum }) : x)));
+        if (!yeniDurum)
             return;
-        videoAc({
-            liste: vd.liste, indeks: i, baslik: vd.konu.ad,
-            tamamla: (vid) => {
-                if (salt)
-                    return;
-                set({
-                    konular: Object.assign(Object.assign({}, o.konular), { [dersId]: (o.konular[dersId] || []).map((k) => k.id !== vd.konu.id ? k : Object.assign(Object.assign({}, k), { video: undefined, asama: Math.max(k.asama, 1), videolar: videolariAl(k).map((v) => v.id === vid ? Object.assign(Object.assign({}, v), { izlendi: true }) : v) })) }),
-                });
-            },
+        const hedefAsama = g.tip === "tekrar" ? g.kademe + 2 : 1;
+        const liste = o.konular[g.ders] || [];
+        const konu = liste.find((k) => k.ad === g.konu);
+        if (konu && konu.asama < hedefAsama) {
+            set({
+                konular: Object.assign(Object.assign({}, o.konular), { [g.ders]: liste.map((k) => k.id === konu.id ? Object.assign(Object.assign({}, k), { asama: hedefAsama }) : k) }),
+            });
+        }
+    };
+    const guncelle = (id, deg) => yaz(gorevler.map((x) => (x.id === id ? Object.assign(Object.assign({}, x), deg) : x)));
+    const ertele = (g, gun) => guncelle(g.id, { tarih: tarihEkle(g.tarih, gun) });
+    const sil = (g) => {
+        const cocuklar = gorevler.filter((x) => x.kokId === g.id);
+        if (cocuklar.length && !window.confirm(`Bu konunun ${cocuklar.length} tekrarı da silinsin mi?`)) {
+            yaz(gorevler.filter((x) => x.id !== g.id));
+        }
+        else {
+            yaz(gorevler.filter((x) => x.id !== g.id && x.kokId !== g.id));
+        }
+        setSecili(null);
+    };
+    /* --- şablon --- */
+    const sablonKaydet = () => {
+        const ad = window.prompt("Şablon adı:", `${kisaTarih(hafta[0])} haftası`);
+        if (!ad)
+            return;
+        const hb = hafta[0];
+        const gunler = gorevler
+            .filter((g) => hafta.includes(g.tarih) && g.tip === "calisma")
+            .map((g) => ({
+            ofset: Math.round((new Date(g.tarih) - new Date(hb)) / 86400000),
+            saat: g.saat, sure: g.sure, ders: g.ders, konu: g.konu,
+        }));
+        if (!gunler.length) {
+            setMesaj("Bu haftada kaydedilecek çalışma görevi yok.");
+            return;
+        }
+        setSablonlar([...sablonlar, {
+                id: `s${Date.now()}`, ad, seviye: o.seviye, alan: o.alan, gunler,
+            }]);
+        setMesaj(`"${ad}" şablonu kaydedildi (${gunler.length} görev).`);
+    };
+    const sablonUygula = (s, tekrarli) => {
+        const hb = hafta[0];
+        const yeni = [];
+        s.gunler.forEach((x, i) => {
+            const kok = {
+                id: `g${Date.now()}-${i}`, tarih: tarihEkle(hb, x.ofset),
+                saat: x.saat || "", sure: x.sure || 45, ders: x.ders, konu: x.konu,
+                tip: "calisma", kademe: null, tamam: false,
+            };
+            yeni.push(kok);
+            if (tekrarli)
+                yeni.push(...tekrarUret(kok));
         });
+        yaz([...gorevler, ...yeni]);
+        setSablonAcik(false);
+        setMesaj(`"${s.ad}" uygulandı · ${s.gunler.length} görev eklendi.`);
+    };
+    const sablonSil = (id) => {
+        if (!window.confirm("Bu şablon silinsin mi?"))
+            return;
+        setSablonlar(sablonlar.filter((x) => x.id !== id));
+    };
+    const uygunSablonlar = sablonlar.filter((s) => s.seviye === o.seviye && (o.seviye !== "yks" || s.alan === o.alan));
+    /* --- görev çipi --- */
+    const Cip = ({ g }) => {
+        const d = dl.find((x) => x.id === g.ders);
+        const renk = dersRenk(g.ders);
+        return (React.createElement("button", { className: `tk-cip${g.tamam ? " bitti" : ""}${g.tip === "tekrar" ? " tekrar" : ""}`, style: { "--c": renk }, onClick: () => setSecili(g.id) },
+            React.createElement("span", { className: "tk-cip-ust" },
+                g.saat && React.createElement("span", { className: "tk-saat" }, g.saat),
+                React.createElement("span", { className: "tk-ders" }, d ? d.kisa : "—"),
+                g.tip === "tekrar" && React.createElement("span", { className: "tk-rozet" }, TEKRAR_KISA[g.kademe])),
+            React.createElement("span", { className: "tk-konu" }, g.konu)));
     };
     return (React.createElement(React.Fragment, null,
-        React.createElement("section", { className: "kart" },
+        React.createElement("section", { className: "kart tk-ust-kart" },
+            React.createElement("div", { className: "tk-nav" },
+                React.createElement("button", { className: "tk-ok", onClick: () => setOdak(tarihEkle(odak, -7)) }, "\u2039"),
+                React.createElement("div", { className: "tk-aralik" },
+                    React.createElement("div", { className: "tk-aralik-b" }, gorunum === "hafta"
+                        ? `${kisaTarih(hafta[0])} – ${kisaTarih(hafta[6])}`
+                        : `${GUNLER[gunIndeksi(odak)]}, ${kisaTarih(odak)}`),
+                    React.createElement("div", { className: "tk-aralik-a" },
+                        haftaSayim.biten,
+                        " / ",
+                        haftaSayim.toplam,
+                        " g\u00F6rev tamamland\u0131")),
+                React.createElement("button", { className: "tk-ok", onClick: () => setOdak(tarihEkle(odak, 7)) }, "\u203A")),
+            React.createElement("div", { className: "tk-arac" },
+                React.createElement("div", { className: "cipler yapisik" },
+                    [["hafta", "HAFTA"], ["gun", "GÜN"]].map(([id, ad]) => (React.createElement("button", { key: id, onClick: () => setGorunum(id), className: gorunum === id ? "cip etkin" : "cip" }, ad))),
+                    React.createElement("button", { className: "cip", onClick: () => setOdak(bugun()) }, "BUG\u00DCN")),
+                !salt && (React.createElement("button", { className: "ikincil", onClick: () => {
+                        setEkleAcik(!ekleAcik);
+                        setSablonAcik(false);
+                    } }, ekleAcik ? "Vazgeç" : "+ Görev"))),
+            koc && (React.createElement("div", { className: "tk-arac", style: { marginTop: 10 } },
+                React.createElement("button", { className: "ufak", onClick: () => {
+                        setSablonAcik(!sablonAcik);
+                        setEkleAcik(false);
+                    } },
+                    "\u015Eablonlar (",
+                    uygunSablonlar.length,
+                    ")"),
+                React.createElement("button", { className: "ufak", onClick: sablonKaydet }, "Bu haftay\u0131 \u015Fablon yap"))),
+            mesaj && React.createElement("div", { className: "mesaj" }, mesaj)),
+        sablonAcik && koc && (React.createElement("section", { className: "kart" },
+            React.createElement("div", { className: "etiket" }, "\u015EABLONLAR"),
+            uygunSablonlar.length === 0 ? (React.createElement(Bos, { baslik: "\u015Eablon yok", metin: "Bir haftan\u0131n plan\u0131n\u0131 kurup \u201CBu haftay\u0131 \u015Fablon yap\u201D diyerek kaydedin. Sonra tek dokunu\u015Fla ba\u015Fka \u00F6\u011Frencilere uygulayabilirsiniz." })) : (uygunSablonlar.map((s) => (React.createElement("div", { className: "sbl", key: s.id },
+                React.createElement("div", { className: "sbl-sol" },
+                    React.createElement("div", { className: "sbl-ad" }, s.ad),
+                    React.createElement("div", { className: "sbl-alt" },
+                        s.gunler.length,
+                        " g\u00F6rev \u00B7 ",
+                        s.seviye === "yks"
+                            ? `YKS ${(ALANLAR[s.alan] || ALANLAR.say).kisa}` : "LGS")),
+                React.createElement("div", { className: "sbl-d" },
+                    React.createElement("button", { className: "ufak", onClick: () => sablonUygula(s, true) }, "Uygula"),
+                    React.createElement("button", { className: "ufak", onClick: () => sablonUygula(s, false) }, "Tekrars\u0131z"),
+                    React.createElement("button", { className: "ufak tehlike", onClick: () => sablonSil(s.id) }, "Sil")))))),
+            React.createElement("div", { className: "ipuc" }, "\u015Eablon, g\u00F6r\u00FCnt\u00FClenen haftan\u0131n pazartesisinden ba\u015Flayarak uygulan\u0131r."))),
+        ekleAcik && !salt && (React.createElement("section", { className: "kart" },
+            React.createElement("div", { className: "etiket" }, "YEN\u0130 G\u00D6REV"),
+            React.createElement("div", { className: "kutucuk-a" }, "1 \u00B7 DERS"),
+            React.createElement(DersCipleri, { dersler: dl, secili: f.ders, sec: (id) => setF(Object.assign(Object.assign({}, f), { ders: id, konu: "" })), ayirici: o.seviye === "yks" ? DERSLER_TYT.length + DERSLER_CALISMA.length : 0 }),
+            React.createElement("div", { className: "kutucuk-a", style: { marginTop: 16 } }, "2 \u00B7 KONU"),
+            React.createElement("div", { className: "konu-sec" }, (o.konular[f.ders] || []).map((k) => (React.createElement("button", { key: k.id, className: f.konu === k.ad ? "konu-sec-b etkin" : "konu-sec-b", onClick: () => setF(Object.assign(Object.assign({}, f), { konu: k.ad })) },
+                k.ad,
+                k.asama > 0 && React.createElement("span", { className: "oneri-asama" }, ASAMALAR[k.asama - 1]))))),
+            React.createElement("div", { className: "kutucuk-a", style: { marginTop: 16 } }, "3 \u00B7 ZAMAN"),
+            React.createElement("div", { className: "form" },
+                React.createElement("div", { className: "ikili-g" },
+                    React.createElement(Alan, { etiket: "Tarih", type: "date", value: f.tarih, onChange: (e) => setF(Object.assign(Object.assign({}, f), { tarih: e.target.value })) }),
+                    React.createElement(Alan, { etiket: "Saat (iste\u011Fe ba\u011Fl\u0131)", type: "time", value: f.saat, onChange: (e) => setF(Object.assign(Object.assign({}, f), { saat: e.target.value })) }))),
+            React.createElement("div", { className: "kutucuk-a", style: { marginTop: 12 } }, "S\u00DCRE"),
+            React.createElement("div", { className: "cipler" }, SURE_SECENEK.map((x) => (React.createElement("button", { key: x, onClick: () => setF(Object.assign(Object.assign({}, f), { sure: x })), className: Number(f.sure) === x ? "cip etkin" : "cip" },
+                x,
+                " dk")))),
+            React.createElement("button", { className: f.tekrar ? "onay etkin" : "onay", onClick: () => setF(Object.assign(Object.assign({}, f), { tekrar: !f.tekrar })) },
+                React.createElement("span", { className: "onay-k" }, f.tekrar ? "✓" : ""),
+                "Tekrarlar\u0131 otomatik planla (1 g\u00FCn \u00B7 1 hafta \u00B7 1 ay \u00B7 3 ay \u00B7 6 ay)"),
+            React.createElement("button", { className: "birincil", onClick: gorevEkle, disabled: !f.konu.trim() }, "G\u00F6revi ekle"))),
+        seciliGorev && (React.createElement("section", { className: "kart gorev-panel", style: { "--c": dersRenk(seciliGorev.ders) } },
             React.createElement("div", { className: "kart-ust" },
-                React.createElement("div", { className: "etiket" }, "HAFTALIK PROGRAM"),
-                React.createElement("div", { className: "sayac" },
-                    biten,
-                    " / ",
-                    toplam,
-                    " g\u00F6rev")),
-            React.createElement("div", { className: "gun-cipler" }, GUN_KISA.map((g, i) => {
-                const gl = program[i] || [];
-                const gb = gl.filter((x) => x.tamam).length;
-                const tam = gl.length > 0 && gb === gl.length;
-                return (React.createElement("button", { key: g, onClick: () => { setGun(i); setEkle(false); }, className: `gun-cip${gun === i ? " etkin" : ""}${i === bugunIndeks() ? " bugun" : ""}` },
-                    React.createElement("span", { className: "gun-k" }, g),
-                    React.createElement("span", { className: `gun-s${tam ? " tam" : ""}` }, gl.length ? `${gb}/${gl.length}` : "—")));
-            }))),
-        React.createElement("section", { className: "kart" },
-            React.createElement("div", { className: "kart-ust" },
-                React.createElement("div", { className: "etiket" },
-                    GUNLER[gun].toUpperCase(),
-                    gun === bugunIndeks() ? " · BUGÜN" : ""),
-                React.createElement("div", { className: "sayac" },
-                    liste.length,
-                    " / ",
-                    GOREV_SAYISI)),
-            liste.length === 0 && !ekle && (React.createElement(Bos, { baslik: "Bu g\u00FCne g\u00F6rev yok", metin: salt ? "Bu gün için program tanımlanmamış."
-                    : "Aşağıdan ders ve konu seçerek görev ekleyin." })),
-            liste.map((g, i) => {
-                var _a;
-                const vd = videoBul(o, g.ders, g.konu);
-                return (React.createElement("div", { className: g.tamam ? "gorev bitti" : "gorev", key: g.id, onDoubleClick: () => !salt && sil(g.id) },
-                    React.createElement("button", { className: g.tamam ? "gorev-kutu dolu" : "gorev-kutu", onClick: () => degistir(g.id), "aria-label": "Tamamland\u0131" }, g.tamam ? "✓" : i + 1),
-                    React.createElement("div", { className: "gorev-yazi" },
-                        React.createElement("div", { className: "gorev-ders" },
-                            ((_a = dl.find((x) => x.id === g.ders)) === null || _a === void 0 ? void 0 : _a.kisa) || "—",
-                            vd.toplam > 1 && (React.createElement("span", { className: "gorev-vid" },
-                                " \u00B7 video ",
-                                vd.izlenen,
-                                "/",
-                                vd.toplam))),
-                        React.createElement("div", { className: "gorev-konu" }, g.konu)),
-                    vd.toplam > 0 && (React.createElement("button", { className: "vid-b dolu genis", "aria-label": "Video", onClick: () => videoIzle(g.ders, vd) }, "\u25B6"))));
-            }),
-            !salt && liste.length < GOREV_SAYISI && (ekle ? (React.createElement("div", { className: "sec-panel" },
-                React.createElement("div", { className: "kutucuk-a" }, "1 \u00B7 DERS SE\u00C7"),
-                React.createElement(DersCipleri, { dersler: dl, secili: ders, sec: setDers, ayirici: ayirici }),
-                React.createElement("div", { className: "kutucuk-a", style: { marginTop: 14 } }, "2 \u00B7 KONU SE\u00C7"),
-                React.createElement("div", { className: "konu-sec" },
-                    (o.konular[ders] || []).map((k) => (React.createElement("button", { key: k.id, className: "konu-sec-b", onClick: () => gorevEkle(k.ad) }, k.ad))),
-                    (o.konular[ders] || []).length === 0 && (React.createElement("div", { className: "ipuc" }, "Bu derse hen\u00FCz konu eklenmemi\u015F."))),
-                React.createElement("button", { className: "ikincil tam", onClick: () => setEkle(false) }, "Vazge\u00E7"))) : (React.createElement("button", { className: "birincil", onClick: () => setEkle(true) }, "+ G\u00F6rev ekle"))),
-            !salt && liste.length > 0 && (React.createElement("div", { className: "ipuc" }, "G\u00F6revi silmek i\u00E7in sat\u0131ra \u00E7ift dokun"))),
-        React.createElement("button", { className: "ikincil tam", onClick: () => window.print() }, "Program\u0131 PDF olarak indir"),
+                React.createElement("div", { className: "gp-baslik" },
+                    React.createElement("span", { className: "gp-ders" }, (_a = dl.find((x) => x.id === seciliGorev.ders)) === null || _a === void 0 ? void 0 :
+                        _a.kisa,
+                        seciliGorev.tip === "tekrar" &&
+                            ` · ${TEKRAR_AD[seciliGorev.kademe]} tekrar`),
+                    React.createElement("div", { className: "gp-konu" }, seciliGorev.konu),
+                    React.createElement("div", { className: "gp-tarih" },
+                        GUNLER[gunIndeksi(seciliGorev.tarih)],
+                        ", ",
+                        kisaTarih(seciliGorev.tarih),
+                        seciliGorev.saat ? ` · ${seciliGorev.saat}` : "",
+                        " \u00B7 ",
+                        seciliGorev.sure,
+                        " dk")),
+                React.createElement("button", { className: "vid-kapat", onClick: () => setSecili(null) }, "\u00D7")),
+            !salt && (React.createElement(React.Fragment, null,
+                React.createElement("button", { className: seciliGorev.tamam ? "birincil bitti-b" : "birincil", onClick: () => tamamla(seciliGorev) }, seciliGorev.tamam ? "✓ Tamamlandı — geri al" : "Tamamlandı olarak işaretle"),
+                React.createElement("div", { className: "kutucuk-a", style: { marginTop: 16 } }, "ERTELE"),
+                React.createElement("div", { className: "cipler" }, [[1, "+1 gün"], [2, "+2 gün"], [7, "+1 hafta"]].map(([n, ad]) => (React.createElement("button", { key: n, className: "cip", onClick: () => ertele(seciliGorev, n) }, ad)))),
+                React.createElement("div", { className: "form" },
+                    React.createElement("div", { className: "uclu" },
+                        React.createElement(Alan, { etiket: "Tarih", type: "date", value: seciliGorev.tarih, onChange: (e) => guncelle(seciliGorev.id, { tarih: e.target.value }) }),
+                        React.createElement(Alan, { etiket: "Saat", type: "time", value: seciliGorev.saat || "", onChange: (e) => guncelle(seciliGorev.id, { saat: e.target.value }) }),
+                        React.createElement(Alan, { etiket: "S\u00FCre (dk)", type: "number", value: seciliGorev.sure, onChange: (e) => guncelle(seciliGorev.id, { sure: Number(e.target.value) || 15 }) }))),
+                React.createElement("div", { className: "konu-panel-d" },
+                    (() => {
+                        const vd = videoBul(o, seciliGorev.ders, seciliGorev.konu);
+                        return vd.toplam > 0 ? (React.createElement("button", { className: "ikincil", onClick: () => videoAc({
+                                liste: vd.liste, indeks: sonrakiBolum(vd.liste),
+                                baslik: seciliGorev.konu, tamamla: () => { },
+                            }) },
+                            "\u25B6 Video (",
+                            vd.izlenen,
+                            "/",
+                            vd.toplam,
+                            ")")) : null;
+                    })(),
+                    React.createElement("button", { className: "ufak tehlike", onClick: () => sil(seciliGorev) }, "Sil")))))),
+        gorunum === "hafta" ? (React.createElement("div", { className: "tk-hafta" }, hafta.map((t) => {
+            const liste = gunGorevleri(o, t);
+            const biten = liste.filter((g) => g.tamam).length;
+            return (React.createElement("div", { className: `tk-gun${t === bugun() ? " bugun" : ""}`, key: t },
+                React.createElement("button", { className: "tk-gun-b", onClick: () => { setOdak(t); setGorunum("gun"); } },
+                    React.createElement("span", { className: "tk-gun-ad" }, GUN_KISA[gunIndeksi(t)]),
+                    React.createElement("span", { className: "tk-gun-t" }, Number(t.split("-")[2])),
+                    liste.length > 0 && (React.createElement("span", { className: biten === liste.length ? "tk-gun-s tam" : "tk-gun-s" },
+                        biten,
+                        "/",
+                        liste.length))),
+                React.createElement("div", { className: "tk-gun-liste" },
+                    liste.map((g) => React.createElement(Cip, { key: g.id, g: g })),
+                    liste.length === 0 && React.createElement("div", { className: "tk-bos" }, "\u2014"))));
+        }))) : (React.createElement(GunIzgara, { o: o, tarih: odak, Cip: Cip })),
+        React.createElement("button", { className: "ikincil tam", onClick: () => window.print() }, "Bu haftay\u0131 PDF olarak indir"),
         React.createElement("div", { className: "baski" },
             React.createElement("div", { className: "baski-ust" },
                 React.createElement("div", { className: "baski-b" }, "Haftal\u0131k \u00C7al\u0131\u015Fma Program\u0131"),
@@ -1312,27 +1934,66 @@ function Program({ o, set, salt, videoAc }) {
                     o.sinif,
                     " \u00B7 ",
                     seviyeEtiket(o),
-                    " \u00B7 ",
-                    trTarih(haftaBasi()),
-                    " haftas\u0131")),
+                    " \u00B7",
+                    " ",
+                    kisaTarih(hafta[0]),
+                    " \u2013 ",
+                    kisaTarih(hafta[6]))),
             React.createElement("table", { className: "baski-t" },
                 React.createElement("thead", null,
                     React.createElement("tr", null,
                         React.createElement("th", { className: "bt-gun" }, "G\u00FCn"),
                         React.createElement("th", null, "G\u00F6revler"))),
-                React.createElement("tbody", null, GUNLER.map((gAd, i) => (React.createElement("tr", { key: gAd },
-                    React.createElement("td", { className: "bt-gun" }, gAd),
-                    React.createElement("td", null, (program[i] || []).length === 0 ? (React.createElement("span", { className: "bt-bos" }, "\u2014")) : ((program[i] || []).map((g) => {
-                        var _a;
-                        return (React.createElement("div", { className: "bt-gorev", key: g.id },
-                            React.createElement("span", { className: "bt-kutu" }),
-                            React.createElement("b", null, (_a = dl.find((x) => x.id === g.ders)) === null || _a === void 0 ? void 0 : _a.kisa),
-                            " ",
-                            g.konu));
-                    })))))))),
+                React.createElement("tbody", null, hafta.map((t) => {
+                    const liste = gunGorevleri(o, t);
+                    return (React.createElement("tr", { key: t },
+                        React.createElement("td", { className: "bt-gun" },
+                            GUNLER[gunIndeksi(t)],
+                            React.createElement("br", null),
+                            React.createElement("span", { className: "bt-tarih" }, kisaTarih(t))),
+                        React.createElement("td", null, liste.length === 0 ? React.createElement("span", { className: "bt-bos" }, "\u2014") : liste.map((g) => {
+                            var _a;
+                            return (React.createElement("div", { className: "bt-gorev", key: g.id },
+                                React.createElement("span", { className: "bt-kutu" }),
+                                g.saat && React.createElement("span", { className: "bt-saat" }, g.saat),
+                                React.createElement("b", null, (_a = dl.find((x) => x.id === g.ders)) === null || _a === void 0 ? void 0 : _a.kisa),
+                                " ",
+                                g.konu,
+                                g.tip === "tekrar" && (React.createElement("span", { className: "bt-tekrar" },
+                                    "tekrar \u00B7 ",
+                                    TEKRAR_KISA[g.kademe]))));
+                        }))));
+                }))),
             React.createElement("div", { className: "baski-alt" },
                 "Derbent Gen\u00E7lik Lokali \u00B7 E\u011Fitim Ko\u00E7lu\u011Fu \u2014 ",
                 KOC))));
+}
+/* Gün görünümü: saatsiz şerit + saat ızgarası */
+function GunIzgara({ o, tarih, Cip }) {
+    const liste = gunGorevleri(o, tarih);
+    const saatsiz = liste.filter((g) => !g.saat);
+    const saatli = liste.filter((g) => g.saat);
+    const saatler = Array.from({ length: SAAT_SON - SAAT_BAS }, (_, i) => SAAT_BAS + i);
+    return (React.createElement(React.Fragment, null,
+        React.createElement("section", { className: "kart" },
+            React.createElement("div", { className: "etiket" }, "SAAT\u0130 BEL\u0130RT\u0130LMEYENLER"),
+            saatsiz.length === 0 ? (React.createElement("div", { className: "ipuc", style: { margin: 0 } }, "Yok")) : (React.createElement("div", { className: "tk-serit" }, saatsiz.map((g) => React.createElement(Cip, { key: g.id, g: g }))))),
+        React.createElement("section", { className: "kart izgara-kart" },
+            React.createElement("div", { className: "etiket" }, "G\u00DCN PLANI"),
+            React.createElement("div", { className: "izgara", style: { height: (SAAT_SON - SAAT_BAS) * SAAT_YUK } },
+                saatler.map((s) => (React.createElement("div", { className: "izgara-satir", key: s, style: { height: SAAT_YUK } },
+                    React.createElement("span", { className: "izgara-saat" },
+                        String(s).padStart(2, "0"),
+                        ":00"),
+                    React.createElement("span", { className: "izgara-cizgi" })))),
+                saatli.map((g) => {
+                    const dk = saatDakika(g.saat) - SAAT_BAS * 60;
+                    if (dk < 0)
+                        return null;
+                    const yuk = Math.max((g.sure / 60) * SAAT_YUK, 26);
+                    return (React.createElement("div", { className: "izgara-blok", key: g.id, style: { top: (dk / 60) * SAAT_YUK, height: yuk } },
+                        React.createElement(Cip, { g: g })));
+                })))));
 }
 /* ================================================================== */
 /*  3. SORU TAKİBİ                                                     */
@@ -1340,10 +2001,28 @@ function Program({ o, set, salt, videoAc }) {
 function Soru({ o, set, salt }) {
     const dl = dersleriGetir(o);
     const [ders, setDers] = useState(dl[0].id);
-    const [f, setF] = useState({ tarih: bugun(), konu: "", soru: "", dogru: "", yanlis: "" });
+    const [f, setF] = useState({ tarih: bugun(), konu: "", soru: "", dogru: "", yanlis: "", kaynak: "" });
     const [odak, setOdak] = useState(false);
+    const [kAcik, setKAcik] = useState(false);
+    const [kYeni, setKYeni] = useState("");
+    const grup = dersGrubu(o, ders);
+    const kaynaklar = useMemo(() => kaynaklariAl(o, grup), [o.kaynaklar, grup]);
+    const kaynakEkle = () => {
+        if (!kYeni.trim() || kaynaklar.length >= KAYNAK_SINIR)
+            return;
+        set({
+            kaynaklar: [...(o.kaynaklar || []),
+                { id: `k${Date.now()}`, ad: kYeni.trim(), grup }],
+        });
+        setKYeni("");
+    };
+    const kaynakSil = (id) => set({ kaynaklar: (o.kaynaklar || []).filter((x) => x.id !== id) });
+    const kaynakAdi = (id) => {
+        const k = (o.kaynaklar || []).find((x) => x.id === id);
+        return k ? k.ad : "";
+    };
     const k = katsayi(o);
-    const ayirici = o.seviye === "yks" ? DERSLER_TYT.length : 0;
+    const ayirici = o.seviye === "yks" ? DERSLER_TYT.length + DERSLER_CALISMA.length : 0;
     /* Seçili dersin konuları, yazdıkça daralır */
     const eslesen = useMemo(() => {
         const hepsi = o.konular[ders] || [];
@@ -1365,7 +2044,7 @@ function Soru({ o, set, salt }) {
         set({
             kayitlar: [...o.kayitlar, {
                     id: Date.now(), tarih: f.tarih, ders, konu: f.konu.trim() || "—",
-                    soru: s, dogru: d, yanlis: y, bos,
+                    soru: s, dogru: d, yanlis: y, bos, kaynak: f.kaynak || "",
                 }],
         });
         setF(Object.assign(Object.assign({}, f), { konu: "", soru: "", dogru: "", yanlis: "" }));
@@ -1382,6 +2061,11 @@ function Soru({ o, set, salt }) {
             React.createElement(DersCipleri, { dersler: dl, secili: ders, sec: setDers, ayirici: ayirici }),
             React.createElement("div", { className: "form", style: { marginTop: 16 } },
                 React.createElement(Alan, { etiket: "Tarih", type: "date", value: f.tarih, onChange: (e) => setF(Object.assign(Object.assign({}, f), { tarih: e.target.value })) }),
+                React.createElement("div", { className: "alan" },
+                    React.createElement("span", null,
+                        "KAYNAK ",
+                        o.seviye === "yks" ? `· ${grup.toUpperCase()}` : ""),
+                    kaynaklar.length === 0 ? (React.createElement("div", { className: "ipuc", style: { margin: "2px 0 0" } }, "A\u015Fa\u011F\u0131dan kaynak ekleyebilirsin.")) : (React.createElement("div", { className: "cipler", style: { marginBottom: 0 } }, kaynaklar.map((kk) => (React.createElement("button", { key: kk.id, onClick: () => setF(Object.assign(Object.assign({}, f), { kaynak: f.kaynak === kk.id ? "" : kk.id })), className: f.kaynak === kk.id ? "cip etkin" : "cip" }, kk.ad)))))),
                 React.createElement("label", { className: "alan" },
                     React.createElement("span", null, "Konu"),
                     React.createElement("input", { value: f.konu, placeholder: "Konu se\u00E7 veya yaz", onFocus: () => setOdak(true), onBlur: () => setTimeout(() => setOdak(false), 160), onChange: (e) => setF(Object.assign(Object.assign({}, f), { konu: e.target.value })) })),
@@ -1410,6 +2094,24 @@ function Soru({ o, set, salt }) {
                 k,
                 " yanl\u0131\u015F 1 do\u011Fruyu g\u00F6t\u00FCr\u00FCr \u00B7 Net = Do\u011Fru \u2212 Yanl\u0131\u015F/",
                 k))),
+        !salt && (React.createElement("section", { className: "kart" },
+            React.createElement("div", { className: "kart-ust" },
+                React.createElement("div", { className: "etiket" },
+                    "KAYNAKLARIM",
+                    o.seviye === "yks" ? ` · ${grup.toUpperCase()}` : ""),
+                React.createElement("button", { className: "link", onClick: () => setKAcik(!kAcik) }, kAcik ? "Kapat" : `${kaynaklar.length}/${KAYNAK_SINIR}`)),
+            kAcik && (React.createElement(React.Fragment, null,
+                kaynaklar.length === 0 && (React.createElement("div", { className: "ipuc", style: { marginTop: 0, marginBottom: 12 } }, "Kulland\u0131\u011F\u0131n yay\u0131n veya kitaplar\u0131 ekle, soru girerken se\u00E7ebilirsin.")),
+                kaynaklar.map((kk) => (React.createElement("div", { className: "kynk", key: kk.id },
+                    React.createElement("span", { className: "kynk-ad" }, kk.ad),
+                    React.createElement("button", { className: "ufak tehlike", onClick: () => kaynakSil(kk.id) }, "Sil")))),
+                kaynaklar.length < KAYNAK_SINIR ? (React.createElement("div", { className: "konu-ekle" },
+                    React.createElement("input", { value: kYeni, placeholder: "Yay\u0131n / kitap ad\u0131", onChange: (e) => setKYeni(e.target.value), onKeyDown: (e) => e.key === "Enter" && kaynakEkle() }),
+                    React.createElement("button", { className: "ikincil", onClick: kaynakEkle }, "Ekle"))) : (React.createElement("div", { className: "ipuc" },
+                    "En fazla ",
+                    KAYNAK_SINIR,
+                    " kaynak eklenebilir.")),
+                o.seviye === "yks" && (React.createElement("div", { className: "ipuc" }, "TYT ve AYT kaynaklar\u0131 ayr\u0131 tutulur. Ders se\u00E7imini de\u011Fi\u015Ftirince di\u011Fer grubun kaynaklar\u0131 g\u00F6r\u00FCn\u00FCr.")))))),
         gunler.length === 0 ? (React.createElement(Bos, { baslik: "Kay\u0131t yok", metin: salt ? "Öğrenci henüz soru çözümü girmedi." : "İlk çözümü yukarıdan ekle." })) : (gunler.map(([tarih, liste]) => {
             const ts = liste.reduce((a, x) => a + x.soru, 0);
             const tn = liste.reduce((a, x) => a + net(x.dogru, x.yanlis, k), 0);
@@ -1435,7 +2137,8 @@ function Soru({ o, set, salt }) {
                             React.createElement("span", { className: "hucre-konu" },
                                 React.createElement("b", null, ((_a = dl.find((z) => z.id === x.ders)) === null || _a === void 0 ? void 0 : _a.kisa) || "—"),
                                 " ",
-                                x.konu),
+                                x.konu,
+                                x.kaynak && kaynakAdi(x.kaynak) && (React.createElement("i", { className: "hucre-kaynak" }, kaynakAdi(x.kaynak)))),
                             React.createElement("span", null, x.soru),
                             React.createElement("span", { className: "ye" }, x.dogru),
                             React.createElement("span", { className: "kr" }, x.yanlis),
@@ -1454,7 +2157,7 @@ function Konu({ o, set, salt, videoAc }) {
     const [yeni, setYeni] = useState("");
     const [acikKonu, setAcikKonu] = useState(null);
     const liste = o.konular[ders] || [];
-    const ayirici = o.seviye === "yks" ? DERSLER_TYT.length : 0;
+    const ayirici = o.seviye === "yks" ? DERSLER_TYT.length + DERSLER_CALISMA.length : 0;
     const aktifDers = dl.find((x) => x.id === ders);
     const konuYaz = (id, deg) => set({
         konular: Object.assign(Object.assign({}, o.konular), { [ders]: liste.map((k) => (k.id === id ? Object.assign(Object.assign({}, k), deg) : k)) }),
@@ -1749,14 +2452,18 @@ function Deneme({ o, set, salt }) {
 const TESHIS = [
     { asama: 0, ad: "İşlenmedi", renk: "kritik",
         oneri: "Önce konu anlatımı izlenmeli, sonra soru çözülmeli." },
-    { asama: 1, ad: "Sadece işlendi", renk: "orta",
-        oneri: "Tekrar edilip bol soru çözülmeli." },
-    { asama: 2, ad: "1 tekrar yapıldı", renk: "orta",
+    { asama: 1, ad: "İşlendi, tekrar yok", renk: "orta",
+        oneri: "1 günlük ilk tekrar yapılmamış. Takvimden tekrarlar planlanmalı." },
+    { asama: 2, ad: "1 gün tekrarı yapıldı", renk: "orta",
+        oneri: "Haftalık tekrar zamanında yapılmalı, soru çözümüyle desteklenmeli." },
+    { asama: 3, ad: "1 hafta tekrarı yapıldı", renk: "orta",
         oneri: "Farklı kaynaktan soru çözülerek pekiştirilmeli." },
-    { asama: 3, ad: "2 tekrar yapıldı", renk: "orta",
-        oneri: "Yanlış çözüm alışkanlığı olabilir; sorular birlikte incelenmeli." },
-    { asama: 4, ad: "3 tekrar yapıldı", renk: "kritik",
-        oneri: "Tekrara rağmen çıkmıyor. Yöntem sorunu, birebir çalışılmalı." },
+    { asama: 4, ad: "1 ay tekrarı yapıldı", renk: "orta",
+        oneri: "Bilgi yerleşmiş görünüyor; yanlışlar dikkat veya süre kaynaklı olabilir." },
+    { asama: 5, ad: "3 ay tekrarı yapıldı", renk: "kritik",
+        oneri: "Tekrarlara rağmen çıkıyor. Soruları birlikte inceleyin." },
+    { asama: 6, ad: "6 ay tekrarı yapıldı", renk: "kritik",
+        oneri: "Tüm tekrarlar bitti ama hâlâ yanlış. Yöntem sorunu, birebir çalışılmalı." },
 ];
 function Analiz({ o, set, salt, videoAc }) {
     const [kapsam, setKapsam] = useState("3");
@@ -1802,39 +2509,37 @@ function Analiz({ o, set, salt, videoAc }) {
             const konu = (o.konular[ders.id] || []).find((kk) => kk.id === x.kid);
             const asama = konu ? konu.asama : 0;
             const sb = soruBasari[`${ders.id}|${konu === null || konu === void 0 ? void 0 : konu.ad}`];
-            return Object.assign(Object.assign({}, x), { ders, konu, asama, teshis: TESHIS[asama] || TESHIS[0], basari: sb && sb.soru ? sb.dogru / sb.soru : null, cozulen: sb ? sb.soru : 0, puan: x.adet + x.deneme * 2 + (asama === 0 ? 3 : 0) + (asama === 4 ? 2 : 0) });
+            return Object.assign(Object.assign({}, x), { ders, konu, asama, teshis: TESHIS[asama] || TESHIS[0], basari: sb && sb.soru ? sb.dogru / sb.soru : null, cozulen: sb ? sb.soru : 0, puan: x.adet + x.deneme * 2 + (asama === 0 ? 3 : 0) + (asama >= 5 ? 2 : 0) });
         }).filter((x) => x.konu).sort((a, b) => b.puan - a.puan);
     }, [denemeler, o.konular, dl, soruBasari]);
     const enCok = eksikler.length ? eksikler[0].adet : 1;
     const gruplar = useMemo(() => ({
         islenmedi: eksikler.filter((x) => x.asama === 0),
-        tekrar: eksikler.filter((x) => x.asama >= 1 && x.asama <= 3),
-        yontem: eksikler.filter((x) => x.asama === 4),
+        tekrar: eksikler.filter((x) => x.asama >= 1 && x.asama <= 4),
+        yontem: eksikler.filter((x) => x.asama >= 5),
     }), [eksikler]);
     const planaEkle = (x) => {
-        const program = Array.isArray(o.program) && o.program.length === 7
-            ? o.program.map((g) => [...g]) : yeniProgram();
-        let hedef = -1;
+        const mevcut = gorevleriAl(o);
+        /* Bugünden başlayarak en az yüklü ilk günü bul */
+        let hedef = bugun(), enAz = Infinity;
         for (let i = 0; i < 7; i++) {
-            const g = (bugunIndeks() + i) % 7;
-            if (program[g].length < GOREV_SAYISI) {
-                hedef = g;
-                break;
+            const t = tarihEkle(bugun(), i);
+            const n = mevcut.filter((g) => g.tarih === t).length;
+            if (n < enAz) {
+                enAz = n;
+                hedef = t;
             }
         }
-        if (hedef === -1) {
-            setMesaj("Haftanın tüm günleri dolu.");
+        if (mevcut.some((g) => g.tarih === hedef && g.konu === x.konu.ad && g.ders === x.ders.id)) {
+            setMesaj(`"${x.konu.ad}" zaten ${kisaTarih(hedef)} planında.`);
             return;
         }
-        if (program[hedef].some((g) => g.konu === x.konu.ad && g.ders === x.ders.id)) {
-            setMesaj(`"${x.konu.ad}" zaten ${GUNLER[hedef]} planında.`);
-            return;
-        }
-        program[hedef].push({
-            id: Date.now(), ders: x.ders.id, konu: x.konu.ad, tamam: false,
-        });
-        set({ program });
-        setMesaj(`"${x.konu.ad}" ${GUNLER[hedef]} gününe eklendi.`);
+        const kok = {
+            id: `g${Date.now()}`, tarih: hedef, saat: "", sure: 45,
+            ders: x.ders.id, konu: x.konu.ad, tip: "calisma", kademe: null, tamam: false,
+        };
+        set({ gorevler: [...mevcut, kok, ...tekrarUret(kok)] });
+        setMesaj(`"${x.konu.ad}" ${kisaTarih(hedef)} gününe eklendi · tekrarlar planlandı.`);
     };
     const isaretliVar = eksikler.length > 0;
     const bos = useMemo(() => bosAnaliz(o, denemeler), [o, denemeler]);
@@ -1926,11 +2631,11 @@ function Analiz({ o, set, salt, videoAc }) {
                     React.createElement("div", { className: "tavsiye-o" }, "Tekrar a\u015Famas\u0131 ilerletilmeli, farkl\u0131 kaynaktan soru \u00E7\u00F6z\u00FClmeli."))),
                 gruplar.yontem.length > 0 && (React.createElement("div", { className: "tavsiye kritik" },
                     React.createElement("div", { className: "tavsiye-b" },
-                        "3 tekrar yap\u0131ld\u0131\u011F\u0131 h\u00E2lde \u00E7\u0131kmayan ",
+                        "\u0130leri tekrara ra\u011Fmen \u00E7\u0131kmayan ",
                         gruplar.yontem.length,
                         " konu"),
                     React.createElement("div", { className: "tavsiye-l" }, gruplar.yontem.slice(0, 6).map((x) => x.konu.ad).join(" · ")),
-                    React.createElement("div", { className: "tavsiye-o" }, TESHIS[4].oneri))),
+                    React.createElement("div", { className: "tavsiye-o" }, TESHIS[6].oneri))),
                 gruplar.islenmedi.length === 0 && gruplar.tekrar.length === 0
                     && gruplar.yontem.length === 0 && (React.createElement(Bos, { baslik: "Belirgin bir \u00F6r\u00FCnt\u00FC yok", metin: "Daha fazla deneme i\u015Faretlendik\u00E7e buradaki de\u011Ferlendirme netle\u015Fir." }))),
             React.createElement("section", { className: "kart" },
@@ -2340,30 +3045,88 @@ function Stil() {
 .kutu:hover{border-color:var(--tur);}
 .konu-ekle{display:flex;gap:8px;margin-top:16px;}
 
-/* haftalık program */
-.gun-cipler{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
-.gun-cip{background:var(--yzy2);border:1.5px solid transparent;border-radius:11px;
-  padding:9px 2px;cursor:pointer;font-family:inherit;display:flex;
-  flex-direction:column;align-items:center;gap:3px;}
-.gun-cip.bugun{border-color:var(--tur-p);}
-.gun-cip.etkin{background:var(--tur);border-color:var(--tur);}
-.gun-k{font-size:9.5px;font-weight:800;letter-spacing:.2px;color:var(--sol);}
-.gun-cip.etkin .gun-k{color:#fff;}
-.gun-s{font-size:10px;font-weight:800;color:var(--met);opacity:.5;}
-.gun-s.tam{color:var(--yes);opacity:1;}
-.gun-cip.etkin .gun-s{color:#fff;opacity:.85;}
-
+/* özet görev satırı */
 .gorev{display:flex;align-items:center;gap:12px;padding:11px 0;
   border-top:1px solid var(--cizgi);}
 .gorev-kutu{width:32px;height:32px;flex-shrink:0;border-radius:10px;
   background:var(--yzy2);border:1.5px solid transparent;color:var(--sol);
   font-family:inherit;font-weight:900;font-size:13px;cursor:pointer;}
 .gorev-kutu.dolu{background:var(--yes);color:#fff;}
-.gorev-kutu:hover{border-color:var(--tur);}
-.gorev-ders{font-size:9.5px;font-weight:800;letter-spacing:.7px;color:var(--tur);}
+.gorev-yazi{flex:1;min-width:0;}
+.gorev-ders{font-size:9.5px;font-weight:800;letter-spacing:.8px;color:var(--tur);}
 .gorev-konu{font-size:13.5px;font-weight:700;margin-top:2px;line-height:1.3;}
 .gorev.bitti .gorev-konu{text-decoration:line-through;color:var(--sol);}
 .gorev.bitti .gorev-ders{opacity:.5;}
+.gorev-vid{font-weight:700;color:var(--sol);letter-spacing:0;}
+
+/* takvim */
+.tk-ust-kart{padding:14px 16px;}
+.tk-nav{display:flex;align-items:center;gap:10px;}
+.tk-ok{width:34px;height:34px;flex-shrink:0;border-radius:11px;background:var(--yzy2);
+  border:none;color:var(--tur);font-size:20px;line-height:1;cursor:pointer;
+  font-family:inherit;font-weight:800;}
+.tk-ok:hover{background:var(--tur-a);}
+.tk-aralik{flex:1;text-align:center;min-width:0;}
+.tk-aralik-b{font-size:14.5px;font-weight:800;letter-spacing:-.2px;}
+.tk-aralik-a{font-size:10.5px;font-weight:700;color:var(--sol);margin-top:2px;}
+.tk-arac{display:flex;justify-content:space-between;align-items:center;
+  gap:8px;margin-top:12px;flex-wrap:wrap;}
+
+.tk-hafta{display:flex;flex-direction:column;gap:8px;}
+.tk-gun{background:var(--yzy);border:1px solid var(--cizgi);border-radius:14px;
+  padding:10px 12px;box-shadow:var(--golge);}
+.tk-gun.bugun{border-color:var(--tur);box-shadow:0 0 0 2px var(--tur-a);}
+.tk-gun-b{display:flex;align-items:baseline;gap:8px;width:100%;background:none;
+  border:none;padding:0 0 8px;cursor:pointer;font-family:inherit;text-align:left;}
+.tk-gun-ad{font-size:9.5px;font-weight:800;letter-spacing:1px;color:var(--sol);}
+.tk-gun-t{font-size:16px;font-weight:900;color:var(--met);}
+.tk-gun.bugun .tk-gun-t{color:var(--tur);}
+.tk-gun-s{margin-left:auto;font-size:10px;font-weight:800;color:var(--sol);}
+.tk-gun-s.tam{color:var(--yes);}
+.tk-gun-liste{display:flex;flex-direction:column;gap:5px;}
+.tk-bos{font-size:11px;color:#BACCD0;font-weight:700;padding:2px 0;}
+
+.tk-cip{display:block;width:100%;text-align:left;cursor:pointer;font-family:inherit;
+  background:color-mix(in srgb, var(--c) 9%, #fff);
+  border:1px solid color-mix(in srgb, var(--c) 28%, #fff);
+  border-left:4px solid var(--c);
+  border-radius:9px;padding:7px 10px;}
+.tk-cip.tekrar{background:#fff;border-style:dashed;}
+.tk-cip.bitti{opacity:.5;}
+.tk-cip.bitti .tk-konu{text-decoration:line-through;}
+.tk-cip-ust{display:flex;align-items:center;gap:6px;}
+.tk-saat{font-size:10px;font-weight:900;color:var(--c);font-variant-numeric:tabular-nums;}
+.tk-ders{font-size:9px;font-weight:800;letter-spacing:.6px;color:var(--c);}
+.tk-rozet{font-size:8px;font-weight:800;letter-spacing:.4px;color:#fff;
+  background:var(--c);padding:2px 5px;border-radius:4px;}
+.tk-konu{display:block;font-size:12.5px;font-weight:700;color:var(--met);
+  margin-top:2px;line-height:1.3;}
+.tk-serit{display:flex;flex-direction:column;gap:6px;}
+
+.izgara-kart{overflow:hidden;}
+.izgara{position:relative;margin-top:4px;}
+.izgara-satir{position:relative;display:flex;align-items:flex-start;gap:8px;}
+.izgara-saat{width:42px;flex-shrink:0;font-size:9.5px;font-weight:800;
+  color:var(--sol);transform:translateY(-5px);font-variant-numeric:tabular-nums;}
+.izgara-cizgi{flex:1;border-top:1px solid var(--cizgi);}
+.izgara-blok{position:absolute;left:50px;right:0;overflow:hidden;}
+.izgara-blok .tk-cip{height:100%;}
+
+.gorev-panel{border-left:4px solid var(--c);}
+.gp-baslik{min-width:0;}
+.gp-ders{font-size:9.5px;font-weight:800;letter-spacing:.8px;color:var(--c);}
+.gp-konu{font-size:17px;font-weight:800;letter-spacing:-.3px;margin-top:3px;}
+.gp-tarih{font-size:11.5px;font-weight:600;color:var(--sol);margin-top:4px;}
+.birincil.bitti-b{background:var(--yes);}
+.konu-sec-b.etkin{border-color:var(--tur);background:var(--tur-a);color:var(--tur);}
+.konu-sec-b{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+
+.sbl{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:12px 0;border-top:1px solid var(--cizgi);flex-wrap:wrap;}
+.sbl:first-of-type{border-top:none;}
+.sbl-ad{font-size:13.5px;font-weight:800;}
+.sbl-alt{font-size:10.5px;font-weight:600;color:var(--sol);margin-top:2px;}
+.sbl-d{display:flex;gap:5px;}
 
 .sec-panel{margin-top:16px;padding:14px;background:var(--yzy2);
   border-radius:14px;}
@@ -2635,6 +3398,9 @@ function Stil() {
   .bt-kutu { width:13px; height:13px; border:1.4px solid #888; border-radius:3px;
     flex-shrink:0; }
   .bt-bos { color:#aaa; }
+  .bt-tarih { font-weight:600; color:#666; font-size:10px; }
+  .bt-saat { font-weight:800; color:#06788C; margin-right:2px; }
+  .bt-tekrar { font-size:9.5px; color:#777; margin-left:6px; }
   .baski-alt { margin-top:18px; font-size:9.5px; font-weight:700;
     color:#666; text-align:center; }
 }
@@ -2708,6 +3474,14 @@ function Stil() {
 .nokta.dolu{background:var(--s-ana);}
 .seri-yazi{font-size:10.5px;font-weight:700;color:var(--s-sol);margin-top:7px;}
 
+/* kaynaklar */
+.kynk{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:10px 0;border-top:1px solid var(--cizgi);}
+.kynk:first-of-type{border-top:none;}
+.kynk-ad{font-size:13px;font-weight:700;}
+.hucre-kaynak{display:block;font-style:normal;font-size:9.5px;font-weight:700;
+  color:var(--sol);margin-top:2px;}
+
 /* alt menü */
 .alt{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;
   display:grid;grid-template-columns:repeat(7,1fr);gap:0;padding:9px 4px 14px;
@@ -2719,6 +3493,70 @@ function Stil() {
 .alt-b.etkin{color:#fff;background:var(--tur);}
 
 @media (prefers-reduced-motion: reduce){ .kok *{transition:none!important;} }
+
+/* ---------- tablet ---------- */
+@media (min-width: 680px) {
+  .kok{max-width:680px;}
+  .uclu{gap:10px;}
+}
+
+/* ---------- masaüstü ---------- */
+@media (min-width: 900px) {
+  .kok{max-width:1120px;padding-bottom:36px;}
+
+  .ust{padding:18px 28px;gap:14px;}
+  .ust-ad{font-size:19px;}
+  .ust-alt{font-size:11.5px;}
+  .demo-bar{padding:10px 28px;}
+  .uyari{margin:14px 28px 0;}
+
+  /* sekmeler alta değil üste */
+  .alt{position:sticky;top:73px;bottom:auto;left:auto;right:auto;
+    max-width:none;margin:0;display:flex;justify-content:center;gap:5px;
+    padding:10px 28px;border-top:none;border-bottom:1px solid var(--cizgi);
+    background:rgba(255,255,255,.97);}
+  .alt-b{flex:0 0 auto;font-size:12.5px;letter-spacing:.2px;
+    padding:10px 20px;border-radius:99px;}
+
+  .govde{padding:22px 28px;gap:16px;max-width:760px;margin:0 auto;}
+
+  /* koç paneli: kartlar iki sütun */
+  .panel-govde{max-width:none;display:grid;grid-template-columns:1fr 1fr;
+    align-items:start;}
+  .panel-govde > *:not(.ogr-kart){grid-column:1 / -1;}
+  .ogr-kart{height:100%;}
+
+  .kart{padding:22px;}
+  .mini-s{font-size:23px;}
+  .mini-a{font-size:10px;}
+  .halka-sayi{font-size:42px;}
+
+  .hk{height:184px;}
+  .hk-ad{font-size:19px;}
+
+  .ikili-g,.uclu{gap:12px;}
+  .isaret-liste,.konu-sec{max-height:420px;}
+  .vid-kutu{max-width:760px;}
+  .sohbet-kart{min-height:340px;}
+  .balon{max-width:68%;}
+  .yaz-cubugu{position:sticky;bottom:18px;}
+
+  .tk-hafta{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:start;}
+  .tk-gun{padding:10px 8px;min-height:150px;}
+  .tk-gun-b{flex-direction:column;align-items:flex-start;gap:2px;}
+  .tk-gun-s{margin-left:0;}
+  .tk-konu{font-size:11.5px;}
+  .tk-cip{padding:6px 8px;}
+  .ogr-dugmeler .ufak{padding:9px 13px;font-size:11.5px;}
+  .cip{padding:10px 16px;font-size:11.5px;}
+  .konu-ad,.oneri-b,.isaret-ad{font-size:13.5px;}
+}
+
+/* çok geniş ekranlarda panel üç sütun */
+@media (min-width: 1240px) {
+  .kok{max-width:1280px;}
+  .panel-govde{grid-template-columns:repeat(3,1fr);}
+}
 `));
 }
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(DerbentLgs, null));
