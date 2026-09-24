@@ -3315,12 +3315,14 @@ function Stil() {
 .tkv-saatler{position:sticky;left:0;z-index:2;background:var(--yzy);
   border-right:1px solid var(--cizgi);}
 .tkv-saat{font-size:9px;font-weight:800;color:var(--sol);text-align:right;
-  padding-right:6px;transform:translateY(-6px);font-variant-numeric:tabular-nums;}
+  padding:2px 6px 0 0;font-variant-numeric:tabular-nums;
+  border-top:1px solid var(--cizgi);}
+.tkv-saat:first-child{border-top:none;}
 
 .tkv-sutun{position:relative;border-left:1px solid var(--cizgi);cursor:pointer;
   background:repeating-linear-gradient(to bottom,
-    transparent 0, transparent calc(var(--h) - 1px),
-    var(--cizgi) calc(var(--h) - 1px), var(--cizgi) var(--h));}
+    var(--cizgi) 0, var(--cizgi) 1px,
+    transparent 1px, transparent var(--h));}
 .tkv-sutun.bugun{background-color:rgba(6,120,140,.035);}
 .tkv-simdi{position:absolute;left:0;right:0;height:2px;background:#D9534F;z-index:5;}
 .tkv-simdi::before{content:"";position:absolute;left:-3px;top:-3px;width:8px;height:8px;
@@ -3738,7 +3740,7 @@ function Stil() {
 
 /* ---------- masaüstü ---------- */
 @media (min-width: 900px) {
-  .kok{max-width:1120px;padding-bottom:36px;}
+  .kok{max-width:1400px;padding-bottom:36px;}
 
   .ust{padding:18px 28px;gap:14px;}
   .ust-ad{font-size:19px;}
@@ -3754,7 +3756,7 @@ function Stil() {
   .alt-b{flex:0 0 auto;font-size:12.5px;letter-spacing:.2px;
     padding:10px 20px;border-radius:99px;}
 
-  .govde{padding:22px 28px;gap:16px;max-width:760px;margin:0 auto;}
+  .govde{padding:22px 28px;gap:16px;max-width:1180px;margin:0 auto;}
 
   /* koç paneli: kartlar iki sütun */
   .panel-govde{max-width:none;display:grid;grid-template-columns:1fr 1fr;
@@ -3779,7 +3781,7 @@ function Stil() {
 
   .tkv-blok-k{font-size:10.5px;}
   .tkv-tablo{grid-template-columns:56px repeat(var(--gun), minmax(120px,1fr));}
-  .tkv{max-height:min(680px, calc(100vh - 260px));}
+  .tkv{max-height:calc(100vh - 250px);min-height:460px;}
   .gd{max-width:460px;}
   .ogr-dugmeler .ufak{padding:9px 13px;font-size:11.5px;}
   .cip{padding:10px 16px;font-size:11.5px;}
@@ -3788,8 +3790,12 @@ function Stil() {
 
 /* çok geniş ekranlarda panel üç sütun */
 @media (min-width: 1240px) {
-  .kok{max-width:1280px;}
   .panel-govde{grid-template-columns:repeat(3,1fr);}
+}
+@media (min-width: 1560px) {
+  .kok{max-width:1720px;}
+  .govde{max-width:1480px;}
+  .panel-govde{grid-template-columns:repeat(4,1fr);}
 }
 `));
 }
