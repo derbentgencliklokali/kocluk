@@ -2024,89 +2024,115 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
         React.createElement("div", { className: "cikti-d" },
             React.createElement("button", { className: "ikincil", onClick: () => yazdir("plan") }, "Plan\u0131 PDF olarak indir"),
             React.createElement("button", { className: "ikincil", onClick: () => yazdir("cizelge") }, "Soru takip \u00E7izelgesi (bo\u015F)")),
-        baski === "plan" && (React.createElement("div", { className: "baski" },
-            React.createElement("div", { className: "baski-ust" },
-                React.createElement("div", { className: "baski-b" }, "Haftal\u0131k \u00C7al\u0131\u015Fma Program\u0131"),
-                React.createElement("div", { className: "baski-a" },
-                    o.ad,
-                    " \u00B7 ",
-                    o.sinif,
-                    " \u00B7 ",
-                    seviyeEtiket(o),
-                    " \u00B7",
-                    " ",
-                    kisaTarih(hafta[0]),
-                    " \u2013 ",
-                    kisaTarih(hafta[6]))),
-            React.createElement("table", { className: "baski-t" },
-                React.createElement("thead", null,
-                    React.createElement("tr", null,
-                        React.createElement("th", { className: "bt-gun" }, "G\u00FCn"),
-                        React.createElement("th", null, "G\u00F6revler"))),
-                React.createElement("tbody", null, hafta.map((t) => {
-                    const liste = gunGorevleri(o, t);
-                    return (React.createElement("tr", { key: t },
-                        React.createElement("td", { className: "bt-gun" },
-                            GUNLER[gunIndeksi(t)],
-                            React.createElement("br", null),
-                            React.createElement("span", { className: "bt-tarih" }, kisaTarih(t))),
-                        React.createElement("td", null, liste.length === 0 ? React.createElement("span", { className: "bt-bos" }, "\u2014") : liste.map((g) => {
-                            var _a, _b;
-                            return (React.createElement("div", { className: "bt-gorev", key: g.id },
-                                React.createElement("span", { className: "bt-kutu" }),
-                                g.saat && React.createElement("span", { className: "bt-saat" }, g.saat),
-                                React.createElement("b", null, g.tip === "deneme"
-                                    ? (g.ders ? (_a = dl.find((x) => x.id === g.ders)) === null || _a === void 0 ? void 0 : _a.kisa : "DENEME")
-                                    : (_b = dl.find((x) => x.id === g.ders)) === null || _b === void 0 ? void 0 : _b.kisa),
-                                " ",
-                                g.konu,
-                                g.tip === "tekrar" && (React.createElement("span", { className: "bt-tekrar" },
-                                    "tekrar \u00B7 ",
-                                    TEKRAR_KISA[g.kademe]))));
-                        }))));
-                }))),
-            React.createElement("div", { className: "baski-alt" },
-                "Derbent Gen\u00E7lik Lokali \u00B7 E\u011Fitim Ko\u00E7lu\u011Fu \u2014 ",
-                KOC))),
+        baski === "plan" && (() => {
+            const saatli = gorevler.filter((g) => hafta.includes(g.tarih) && g.saat);
+            let bs = 8, bt = 22;
+            if (saatli.length) {
+                bs = Math.floor(Math.min(...saatli.map((g) => saatDakika(g.saat) / 60)));
+                bt = Math.ceil(Math.max(...saatli.map((g) => (saatDakika(g.saat) + (g.sure || 45)) / 60)));
+            }
+            bs = Math.max(SAAT_BAS, bs);
+            bt = Math.min(SAAT_SON, Math.max(bt, bs + 6));
+            const SY = 15; /* mm cinsinden saat yüksekliği */
+            const saatler = Array.from({ length: bt - bs }, (_, i) => bs + i);
+            return (React.createElement("div", { className: "baski baski-plan" },
+                React.createElement("div", { className: "baski-ust" },
+                    React.createElement("div", { className: "baski-b" }, "Haftal\u0131k \u00C7al\u0131\u015Fma Program\u0131"),
+                    React.createElement("div", { className: "baski-a" },
+                        o.ad,
+                        " \u00B7 ",
+                        o.sinif,
+                        " \u00B7 ",
+                        seviyeEtiket(o),
+                        " \u00B7",
+                        " ",
+                        kisaTarih(hafta[0]),
+                        " \u2013 ",
+                        kisaTarih(hafta[6]))),
+                React.createElement("div", { className: "pt", style: { "--sy": `${SY}mm` } },
+                    React.createElement("div", { className: "pt-kose" }),
+                    hafta.map((t) => (React.createElement("div", { className: "pt-baslik", key: "h" + t },
+                        GUNLER[gunIndeksi(t)],
+                        React.createElement("span", null, kisaTarih(t))))),
+                    React.createElement("div", { className: "pt-kose pt-tg" }, "tekrar"),
+                    hafta.map((t) => (React.createElement("div", { className: "pt-tumgun", key: "tg" + t }, gorevler.filter((g) => g.tarih === t && !g.saat).map((g) => (React.createElement("div", { className: "pt-mini", key: g.id },
+                        React.createElement("span", { className: "pt-tik" }),
+                        g.tip === "tekrar" ? `${TEKRAR_KISA[g.kademe]} ` : "",
+                        g.konu)))))),
+                    React.createElement("div", { className: "pt-saatler", style: { height: `calc(${bt - bs} * ${SY}mm)` } }, saatler.map((h) => (React.createElement("div", { className: "pt-saat", key: h, style: { height: `${SY}mm` } },
+                        String(h).padStart(2, "0"),
+                        ":00")))),
+                    hafta.map((t) => {
+                        const yer = yerlesimHesapla(gorevler.filter((g) => g.tarih === t && g.saat));
+                        return (React.createElement("div", { className: "pt-sutun", key: "s" + t, style: { height: `calc(${bt - bs} * ${SY}mm)` } },
+                            saatler.map((h) => (React.createElement("div", { className: "pt-cizgi", key: h, style: { height: `${SY}mm` } }))),
+                            yer.map(({ g, sutun, toplam }) => {
+                                var _a, _b;
+                                const dk = saatDakika(g.saat) - bs * 60;
+                                const gen = 100 / toplam;
+                                return (React.createElement("div", { key: g.id, className: `pt-blok${g.tip === "tekrar" ? " tekrar" : ""}${g.tip === "deneme" ? " deneme" : ""}`, style: {
+                                        top: `calc(${dk / 60} * ${SY}mm)`,
+                                        height: `calc(${Math.max(g.sure || 45, 25) / 60} * ${SY}mm - 0.6mm)`,
+                                        left: `${sutun * gen}%`, width: `${gen}%`,
+                                    } },
+                                    React.createElement("span", { className: "pt-tik" }),
+                                    React.createElement("span", { className: "pt-blok-y" },
+                                        React.createElement("b", null,
+                                            g.saat,
+                                            " ",
+                                            g.tip === "deneme"
+                                                ? (g.ders ? (_a = dl.find((x) => x.id === g.ders)) === null || _a === void 0 ? void 0 : _a.kisa : "DENEME")
+                                                : (_b = dl.find((x) => x.id === g.ders)) === null || _b === void 0 ? void 0 : _b.kisa),
+                                        " ",
+                                        g.konu)));
+                            })));
+                    })),
+                React.createElement("div", { className: "baski-alt" },
+                    "Derbent Gen\u00E7lik Lokali \u00B7 E\u011Fitim Ko\u00E7lu\u011Fu \u2014 ",
+                    KOC)));
+        })(),
         baski === "cizelge" && (React.createElement("div", { className: "baski" },
             React.createElement("div", { className: "baski-ust" },
-                React.createElement("div", { className: "baski-b" }, "Soru Takip \u00C7izelgesi"),
+                React.createElement("div", { className: "baski-b" },
+                    o.seviye === "yks" ? "YKS" : "LGS",
+                    " Haftal\u0131k Soru Takip \u00C7izelgesi"),
                 React.createElement("div", { className: "baski-a" },
                     o.ad,
                     " \u00B7 ",
                     o.sinif,
                     " \u00B7 ",
-                    seviyeEtiket(o),
-                    " \u00B7",
-                    " ",
                     kisaTarih(hafta[0]),
                     " \u2013 ",
                     kisaTarih(hafta[6]),
                     " \u00B7 Haftal\u0131k hedef: ",
                     o.haftalikHedef,
                     " soru")),
-            React.createElement("table", { className: "cz" },
+            hafta.map((t) => (React.createElement("table", { className: "cz", key: t },
                 React.createElement("thead", null,
                     React.createElement("tr", null,
-                        React.createElement("th", { className: "cz-ders" }, "Ders"),
-                        hafta.map((t) => (React.createElement("th", { key: t },
-                            GUN_KISA[gunIndeksi(t)],
-                            React.createElement("br", null),
-                            React.createElement("span", { className: "cz-t" },
-                                t.split("-")[2],
-                                ".",
-                                t.split("-")[1])))),
-                        React.createElement("th", { className: "cz-top" }, "Toplam"))),
+                        React.createElement("th", { className: "cz-gun", rowSpan: dl.length + 2 },
+                            React.createElement("span", null, GUNLER[gunIndeksi(t)])),
+                        React.createElement("th", { className: "cz-ders" }, "DERS"),
+                        React.createElement("th", { className: "cz-konu" }, "KONU"),
+                        React.createElement("th", { className: "cz-s" }, "DO\u011ERU"),
+                        React.createElement("th", { className: "cz-s" }, "YANLI\u015E"),
+                        React.createElement("th", { className: "cz-s" }, "BO\u015E"),
+                        React.createElement("th", { className: "cz-s" }, "TOPLAM"))),
                 React.createElement("tbody", null,
                     dl.map((d) => (React.createElement("tr", { key: d.id },
                         React.createElement("td", { className: "cz-ders" }, d.ad),
-                        hafta.map((t) => React.createElement("td", { key: t })),
-                        React.createElement("td", { className: "cz-top" })))),
+                        React.createElement("td", null),
+                        React.createElement("td", null),
+                        React.createElement("td", null),
+                        React.createElement("td", null),
+                        React.createElement("td", null)))),
                     React.createElement("tr", { className: "cz-son" },
-                        React.createElement("td", { className: "cz-ders" }, "G\u00DCNL\u00DCK TOPLAM"),
-                        hafta.map((t) => React.createElement("td", { key: t })),
-                        React.createElement("td", { className: "cz-top" })))),
-            React.createElement("div", { className: "baski-not" }, "Her g\u00FCn \u00E7\u00F6zd\u00FC\u011F\u00FCn soru say\u0131s\u0131n\u0131 ilgili kutuya yaz. Hafta sonunda toplamlar\u0131 doldurup ko\u00E7una g\u00F6ster."),
+                        React.createElement("td", { className: "cz-ders" }, "Toplam"),
+                        React.createElement("td", null),
+                        React.createElement("td", null),
+                        React.createElement("td", null),
+                        React.createElement("td", null),
+                        React.createElement("td", null)))))),
             React.createElement("div", { className: "baski-alt" },
                 "Derbent Gen\u00E7lik Lokali \u00B7 E\u011Fitim Ko\u00E7lu\u011Fu \u2014 ",
                 KOC)))));
@@ -3713,49 +3739,70 @@ function Stil() {
 .cikti-d .ikincil{flex:1;min-width:180px;text-align:center;}
 
 @media print {
-  @page { size: A4 portrait; margin: 12mm; }
+  @page { size: A4 portrait; margin: 10mm; }
+  @page yatay { size: A4 landscape; margin: 8mm; }
   html, body { background:#fff !important; }
   .kok { padding:0 !important; max-width:none !important; background:#fff !important; }
-  /* Sadece baskı bloğunun atalarını görünür bırak */
   .kok > *:not(.govde) { display:none !important; }
   .govde { display:block !important; padding:0 !important; max-width:none !important;
     margin:0 !important; gap:0 !important; }
   .govde > *:not(.baski) { display:none !important; }
   .baski { display:block !important; color:#000;
     font-family:'Montserrat', sans-serif; }
+  .baski-plan { page: yatay; }
 
-  .baski-ust { border-bottom:2px solid #06788C; padding-bottom:8px; margin-bottom:12px; }
-  .baski-b { font-size:18px; font-weight:900; }
-  .baski-a { font-size:10.5px; font-weight:600; color:#444; margin-top:3px; }
-  .baski-t { width:100%; border-collapse:collapse; }
-  .baski-t th { text-align:left; font-size:9.5px; letter-spacing:1px;
-    color:#06788C; border-bottom:1px solid #ccc; padding:5px 6px; }
-  .baski-t td { border-bottom:1px solid #e2e2e2; padding:7px 6px;
-    vertical-align:top; font-size:11px; }
-  .bt-gun { width:92px; font-weight:800; }
-  .bt-tarih { font-weight:600; color:#666; font-size:9.5px; }
-  .bt-gorev { display:flex; align-items:center; gap:6px; padding:2px 0; font-weight:600; }
-  .bt-gorev b { color:#06788C; }
-  .bt-saat { font-weight:800; color:#06788C; }
-  .bt-kutu { width:12px; height:12px; border:1.3px solid #888; border-radius:3px;
-    flex-shrink:0; }
-  .bt-bos { color:#aaa; }
-  .bt-tekrar { font-size:9px; color:#777; margin-left:5px; }
-
-  /* soru takip çizelgesi */
-  .cz { width:100%; border-collapse:collapse; table-layout:fixed; }
-  .cz th, .cz td { border:1px solid #999; text-align:center; font-size:10px;
-    padding:0; height:26px; }
-  .cz th { background:#EAF3F5; font-weight:800; color:#0A4A57; font-size:9px;
-    line-height:1.2; padding:3px 0; }
-  .cz-t { font-weight:600; color:#555; font-size:8.5px; }
-  .cz-ders { width:132px; text-align:left !important; padding-left:6px !important;
-    font-weight:700; font-size:9.5px; }
-  .cz-top { width:56px; background:#F4F8F9; }
-  .cz-son td { background:#EAF3F5; font-weight:800; height:30px; }
-  .baski-not { margin-top:10px; font-size:9.5px; font-weight:600; color:#444; }
-  .baski-alt { margin-top:14px; font-size:9px; font-weight:700;
+  .baski-ust { border-bottom:1.6pt solid #1F4E6B; padding-bottom:5pt; margin-bottom:7pt; }
+  .baski-b { font-size:14pt; font-weight:900; color:#1F4E6B; }
+  .baski-a { font-size:8pt; font-weight:600; color:#444; margin-top:2pt; }
+  .baski-alt { margin-top:8pt; font-size:7pt; font-weight:700;
     color:#666; text-align:center; }
+
+  /* --- takvim çıktısı --- */
+  .pt { display:grid; grid-template-columns:13mm repeat(7, 1fr);
+    border:0.5pt solid #9AAEB8; }
+  .pt-kose { border-right:0.5pt solid #9AAEB8; border-bottom:0.5pt solid #9AAEB8; }
+  .pt-tg { display:flex; align-items:center; justify-content:center;
+    font-size:5.5pt; font-weight:800; color:#7C909A; letter-spacing:.4pt; }
+  .pt-baslik { text-align:center; padding:2mm 1mm; font-size:8pt; font-weight:800;
+    color:#1F4E6B; background:#EAF2F5;
+    border-left:0.5pt solid #9AAEB8; border-bottom:0.5pt solid #9AAEB8; }
+  .pt-baslik span { display:block; font-size:6.5pt; font-weight:600; color:#5A737F; }
+  .pt-tumgun { min-height:6mm; padding:0.6mm;
+    border-left:0.5pt solid #9AAEB8; border-bottom:0.5pt solid #9AAEB8; }
+  .pt-mini { display:flex; align-items:center; gap:1mm; font-size:5.8pt;
+    font-weight:700; padding:0.4mm 0; }
+  .pt-saatler { border-right:0.5pt solid #9AAEB8; }
+  .pt-saat { font-size:6pt; font-weight:800; color:#6C8A93; text-align:right;
+    padding:0.5mm 1mm 0 0; border-top:0.4pt solid #D5E0E5; }
+  .pt-sutun { position:relative; border-left:0.5pt solid #9AAEB8; }
+  .pt-cizgi { border-top:0.4pt solid #D5E0E5; }
+  .pt-blok { position:absolute; overflow:hidden; display:flex; gap:0.8mm;
+    padding:0.6mm 0.8mm; border:0.5pt solid #3D7D91; border-left:1.2pt solid #1F4E6B;
+    background:#F2F8FA; border-radius:0.8mm; }
+  .pt-blok.tekrar { background:#fff; border-style:dashed; border-left-style:solid; }
+  .pt-blok.deneme { background:#E3E8EA; border-color:#3A4A52; border-left-color:#22303A; }
+  .pt-blok-y { font-size:5.8pt; font-weight:600; line-height:1.15; overflow:hidden; }
+  .pt-blok-y b { color:#1F4E6B; }
+  .pt-tik { flex-shrink:0; width:2.6mm; height:2.6mm; border:0.5pt solid #7C909A;
+    border-radius:0.5mm; background:#fff; }
+
+  /* --- soru takip çizelgesi --- */
+  .cz { width:100%; border-collapse:collapse; margin-bottom:3mm;
+    page-break-inside:avoid; }
+  .cz th, .cz td { border:0.6pt solid #1F4E6B; font-size:8pt; height:6.2mm;
+    padding:0 1.5mm; }
+  .cz th { background:#EAF2F5; color:#1F4E6B; font-weight:800; font-size:7.5pt;
+    letter-spacing:.3pt; text-align:left; }
+  .cz-gun { width:7mm; background:#DCE9EE !important; text-align:center; padding:0 !important; }
+  .cz-gun span { writing-mode:vertical-rl; transform:rotate(180deg);
+    display:inline-block; font-size:8pt; font-weight:900; letter-spacing:.6pt;
+    color:#1F4E6B; white-space:nowrap; }
+  .cz-ders { width:34mm; font-weight:700; color:#1F4E6B; }
+  .cz-konu { width:auto; }
+  .cz-s { width:17mm; text-align:center !important; }
+  .cz td.cz-s, .cz tbody td { text-align:center; }
+  .cz tbody td.cz-ders { text-align:left; }
+  .cz-son td { background:#F2F7F9; font-weight:800; }
 }
 
 @media (prefers-reduced-motion: reduce){ .kok *{transition:none!important;} }
