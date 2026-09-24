@@ -739,6 +739,12 @@ const ETKINLIKLER = [
 ];
 const etkinlikBul = (id) => ETKINLIKLER.find((x) => x.id === id) || ETKINLIKLER[6];
 const dersRenk = (id) => DERS_RENK[id] || "#6C8A93";
+/* Hex rengi saydam tona çevirir — yazdırmada color-mix'e güvenmemek için */
+const ton = (hex, a) => {
+    const h = String(hex).replace("#", "");
+    const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+};
 const gorevRenk = (g) => g.tip === "deneme" ? DENEME_RENK
     : g.tip === "etkinlik" ? etkinlikBul(g.kategori).renk
         : dersRenk(g.ders);
@@ -2105,10 +2111,13 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                         GUNLER[gunIndeksi(t)],
                         React.createElement("span", null, kisaTarih(t))))),
                     React.createElement("div", { className: "pt-kose pt-tg" }, "tekrar"),
-                    hafta.map((t) => (React.createElement("div", { className: "pt-tumgun", key: "tg" + t, style: { height: `${seritMM}mm` } }, gorevler.filter((g) => g.tarih === t && !g.saat).map((g) => (React.createElement("div", { className: "pt-mini", key: g.id },
+                    hafta.map((t) => (React.createElement("div", { className: "pt-tumgun", key: "tg" + t, style: { height: `${seritMM}mm` } }, gorevler.filter((g) => g.tarih === t && !g.saat).map((g) => (React.createElement("div", { className: "pt-mini", key: g.id, style: { borderLeftColor: gorevRenk(g),
+                            background: ton(gorevRenk(g), 0.1) } },
                         React.createElement("span", { className: "pt-tik" }),
-                        g.tip === "tekrar" ? `${TEKRAR_KISA[g.kademe]} ` : "",
-                        g.konu)))))),
+                        React.createElement("span", null,
+                            React.createElement("b", { style: { color: gorevRenk(g) } }, g.tip === "tekrar" ? TEKRAR_KISA[g.kademe] : gorevEtiket(g, dl)),
+                            " ",
+                            g.konu))))))),
                     React.createElement("div", { className: "pt-saatler", style: { height: `calc(${bt - bs} * ${SY}mm)` } }, saatler.map((h) => (React.createElement("div", { className: "pt-saat", key: h, style: { height: `${SY}mm` } },
                         String(h).padStart(2, "0"),
                         ":00")))),
@@ -2123,15 +2132,19 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                                         top: `calc(${dk / 60} * ${SY}mm)`,
                                         height: `calc(${Math.max(g.sure || 45, 25) / 60} * ${SY}mm - 0.6mm)`,
                                         left: `${sutun * gen}%`, width: `${gen}%`,
+                                        background: g.tip === "deneme"
+                                            ? ton(gorevRenk(g), 0.82) : ton(gorevRenk(g), 0.14),
+                                        borderColor: ton(gorevRenk(g), 0.55),
+                                        borderLeftColor: gorevRenk(g),
+                                        color: g.tip === "deneme" ? "#fff" : "#1B2C33",
                                     } },
                                     React.createElement("span", { className: "pt-tik" }),
                                     React.createElement("span", { className: "pt-blok-y" },
-                                        React.createElement("b", null,
+                                        React.createElement("b", { style: { color: g.tip === "deneme" ? "#fff" : gorevRenk(g) } }, gorevEtiket(g, dl)),
+                                        React.createElement("i", null, g.konu),
+                                        React.createElement("u", null,
                                             g.saat,
-                                            " ",
-                                            gorevEtiket(g, dl)),
-                                        " ",
-                                        g.konu)));
+                                            g.sure ? ` · ${g.sure} dk` : ""))));
                             })));
                     })),
                 React.createElement("div", { className: "baski-alt" },
@@ -3862,6 +3875,7 @@ function Stil() {
   @page { size: A4 portrait; margin: 10mm; }
   @page yatay { size: A4 landscape; margin: 8mm; }
   html, body { background:#fff !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   .kok { padding:0 !important; max-width:none !important; background:#fff !important; }
   .kok > *:not(.govde) { display:none !important; }
   .govde { display:block !important; padding:0 !important; max-width:none !important;
@@ -3892,23 +3906,30 @@ function Stil() {
   .pt-baslik span { display:block; font-size:6.5pt; font-weight:600; color:#5A737F; }
   .pt-tumgun { overflow:hidden; padding:0.5mm;
     border-left:0.5pt solid #9AAEB8; border-bottom:0.5pt solid #9AAEB8; }
-  .pt-mini { display:flex; align-items:center; gap:1mm; font-size:5.8pt;
-    font-weight:700; padding:0.4mm 0; }
+  .pt-mini { display:flex; align-items:center; gap:1mm; font-size:5.6pt;
+    font-weight:700; padding:0.4mm 0.8mm; margin-bottom:0.4mm;
+    border-left:1.2pt solid; border-radius:0.6mm; }
+  .pt-mini b { font-weight:900; margin-right:0.5mm; }
   .pt-saatler { border-right:0.5pt solid #9AAEB8; }
   .pt-saat { font-size:6pt; font-weight:800; color:#6C8A93; text-align:right;
     padding:0.5mm 1mm 0 0; border-top:0.4pt solid #D5E0E5; }
   .pt-sutun { position:relative; border-left:0.5pt solid #9AAEB8; }
   .pt-cizgi { border-top:0.4pt solid #D5E0E5; }
-  .pt-blok { position:absolute; overflow:hidden; display:flex; gap:0.8mm;
-    padding:0.6mm 0.8mm; border:0.5pt solid #3D7D91; border-left:1.2pt solid #1F4E6B;
-    background:#F2F8FA; border-radius:0.8mm; }
-  .pt-blok.tekrar { background:#fff; border-style:dashed; border-left-style:solid; }
-  .pt-blok.deneme { background:#E3E8EA; border-color:#3A4A52; border-left-color:#22303A; }
-  .pt-blok.etkinlik { background:#fff; border-style:dotted; border-left-style:solid; }
-  .pt-blok-y { font-size:5.8pt; font-weight:600; line-height:1.15; overflow:hidden; }
-  .pt-blok-y b { color:#1F4E6B; }
-  .pt-tik { flex-shrink:0; width:2.6mm; height:2.6mm; border:0.5pt solid #7C909A;
-    border-radius:0.5mm; background:#fff; }
+  .pt-blok { position:absolute; overflow:hidden; display:flex;
+    align-items:center; justify-content:center; text-align:center;
+    padding:0.6mm 1mm; border:0.5pt solid; border-left-width:1.4pt;
+    border-radius:0.8mm; }
+  .pt-blok.tekrar { border-style:dashed; border-left-style:solid; }
+  .pt-blok.etkinlik { border-style:dotted; border-left-style:solid; }
+  .pt-blok-y { display:flex; flex-direction:column; gap:0.3mm;
+    line-height:1.15; overflow:hidden; }
+  .pt-blok-y b { font-size:6.4pt; font-weight:900; letter-spacing:.2pt; }
+  .pt-blok-y i { font-style:normal; font-size:5.8pt; font-weight:700; }
+  .pt-blok-y u { text-decoration:none; font-size:5pt; font-weight:600; opacity:.75; }
+  .pt-tik { position:absolute; top:0.5mm; left:0.7mm;
+    width:2.2mm; height:2.2mm; border:0.5pt solid #7C909A;
+    border-radius:0.4mm; background:#fff; }
+  .pt-mini .pt-tik { position:static; flex-shrink:0; }
 
   /* --- haftalık soru takip çizelgesi --- */
   .cz-sayfa { page-break-after:avoid; }
