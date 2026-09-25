@@ -2158,8 +2158,10 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                     KOC)));
         })(),
         baski === "cizelge" && (() => {
-            const ekBos = dl.length <= 8 ? 2 : 0; /* paragraf/problem gibi ek satırlar */
-            const satirTablo = dl.length + ekBos + 2; /* başlık + dersler + ek + toplam */
+            /* Derslerin yanında ayrıca takip edilen çalışma türleri */
+            const ekDers = o.seviye === "yks" ? ["PARAGRAF (TYT)"] : ["PARAGRAF"];
+            const ekBos = dl.length <= 8 ? 1 : 0; /* koçun kendi ekleyeceği satır */
+            const satirTablo = dl.length + ekDers.length + ekBos + 2;
             /* A4 yatay 194mm; sayfa başlığı 13 + alt bilgi 7 + ara boşluk 3 = 23mm,
                her tablonun üstünde 4.5mm gün şeridi var → 2 sıra için 162mm kalır */
             const satirMM = Math.max(3.8, Math.min(8, 78 / satirTablo));
@@ -2185,6 +2187,16 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                     React.createElement("tbody", null,
                         dl.map((d) => (React.createElement("tr", { key: d.id },
                             React.createElement("td", { className: "h-ders" }, d.ad),
+                            React.createElement("td", null),
+                            React.createElement("td", null),
+                            React.createElement("td", null),
+                            React.createElement("td", null),
+                            React.createElement("td", null),
+                            React.createElement("td", null),
+                            React.createElement("td", null),
+                            React.createElement("td", { className: "h-net" })))),
+                        ekDers.map((ad) => (React.createElement("tr", { className: "hf-ek", key: ad },
+                            React.createElement("td", { className: "h-ders" }, ad),
                             React.createElement("td", null),
                             React.createElement("td", null),
                             React.createElement("td", null),
@@ -2227,6 +2239,13 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                     React.createElement("tbody", null,
                         dl.map((d) => (React.createElement("tr", { key: d.id },
                             React.createElement("td", { className: "h-ders" }, d.ad),
+                            React.createElement("td", null),
+                            React.createElement("td", null),
+                            React.createElement("td", null),
+                            React.createElement("td", null),
+                            React.createElement("td", { className: "h-net" })))),
+                        ekDers.map((ad) => (React.createElement("tr", { className: "hf-ek", key: ad },
+                            React.createElement("td", { className: "h-ders" }, ad),
                             React.createElement("td", null),
                             React.createElement("td", null),
                             React.createElement("td", null),
@@ -3972,6 +3991,9 @@ function Stil() {
   .hf-t tbody tr:nth-child(even) td { background:#F7FAFC; }
   .hf-t tbody tr:nth-child(even) td.h-net { background:#F7E7EA; }
   .hf-top td { background:#F7D9DE !important; font-weight:900; }
+  .hf-ek td { background:#EEF3F7 !important; }
+  .hf-ek td.h-ders { font-weight:800; }
+  .hf-ek td.h-net { background:#F3E4E8 !important; }
 }
 
 @media (prefers-reduced-motion: reduce){ .kok *{transition:none!important;} }
