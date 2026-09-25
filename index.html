@@ -725,6 +725,13 @@ const DERS_RENK = {
 };
 const DENEME_RENK = "#3A4A52";
 /* Ders dışı etkinlikler */
+/* Çalışma görevinin türü */
+const CALISMA_TURU = [
+    { id: "konu", ad: "Konu çalışması", kisa: "KONU" },
+    { id: "soru", ad: "Soru çözümü", kisa: "SORU" },
+    { id: "karma", ad: "Konu + Soru", kisa: "K+S" },
+];
+const calismaBul = (id) => CALISMA_TURU.find((x) => x.id === id) || null;
 const ETKINLIKLER = [
     { id: "kitap", ad: "Kitap", renk: "#7A5CA8" },
     { id: "film", ad: "Film / dizi", renk: "#C05A8A" },
@@ -1787,7 +1794,7 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
     const bosForm = {
         tip: "calisma", ders: dl[0].id, konu: "", tarih: bugun(), saat: "",
         sure: 45, tekrar: true, dnmTur: "genel", dnmAd: "",
-        kategori: "kitap", etkAd: "", listeyeEkle: false,
+        kategori: "kitap", etkAd: "", listeyeEkle: false, calismaTuru: "karma",
     };
     const [f, setF] = useState(bosForm);
     const gorevler = gorevleriAl(o);
@@ -1855,7 +1862,7 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
         const kok = {
             id: `g${Date.now()}`, tarih: f.tarih, saat: f.saat,
             sure: Number(f.sure) || 45, ders: f.ders, konu: f.konu.trim(),
-            tip: "calisma", kademe: null, tamam: false,
+            tip: "calisma", calismaTuru: f.calismaTuru, kademe: null, tamam: false,
         };
         const yeni = f.tekrar ? [kok, ...tekrarUret(kok)] : [kok];
         if (f.listeyeEkle) {
@@ -1866,14 +1873,14 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                     konular: Object.assign(Object.assign({}, o.konular), { [f.ders]: [...mevcut,
                             { id: `${f.ders}-${Date.now()}`, ad: kok.konu, asama: 0 }] }),
                 });
-                setF(Object.assign(Object.assign({}, bosForm), { ders: f.ders, tarih: f.tarih }));
+                setF(Object.assign(Object.assign({}, bosForm), { ders: f.ders, tarih: f.tarih, calismaTuru: f.calismaTuru }));
                 setEkleAcik(false);
                 setMesaj(`"${kok.konu}" eklendi · konu listesine de yazıldı`);
                 return;
             }
         }
         yaz([...gorevler, ...yeni]);
-        setF(Object.assign(Object.assign({}, bosForm), { ders: f.ders, tarih: f.tarih }));
+        setF(Object.assign(Object.assign({}, bosForm), { ders: f.ders, tarih: f.tarih, calismaTuru: f.calismaTuru }));
         setEkleAcik(false);
         setMesaj(f.tekrar
             ? `"${kok.konu}" eklendi · 5 tekrar otomatik planlandı`
@@ -2043,6 +2050,8 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                         React.createElement("input", { className: "gd-ara", value: f.dnmAd, placeholder: f.dnmTur === "bras" ? "Örn. Paragraf Denemesi 3" : "Örn. 3D TYT Deneme 4", onChange: (e) => setF(Object.assign(Object.assign({}, f), { dnmAd: e.target.value })) }))) : (React.createElement(React.Fragment, null,
                         React.createElement("div", { className: "gd-e" }, "DERS"),
                         React.createElement(DersCipleri, { dersler: dl, secili: f.ders, sec: (id) => setF(Object.assign(Object.assign({}, f), { ders: id, konu: "" })), ayirici: o.seviye === "yks" ? DERSLER_TYT.length + DERSLER_CALISMA.length : 0 }),
+                        React.createElement("div", { className: "gd-e" }, "\u00C7ALI\u015EMA T\u00DCR\u00DC"),
+                        React.createElement("div", { className: "gd-sure" }, CALISMA_TURU.map((c) => (React.createElement("button", { key: c.id, onClick: () => setF(Object.assign(Object.assign({}, f), { calismaTuru: c.id })), className: f.calismaTuru === c.id ? "gd-s etkin" : "gd-s" }, c.ad)))),
                         React.createElement("div", { className: "gd-e" }, "KONU / G\u00D6REV ADI"),
                         React.createElement("input", { className: "gd-ara", value: f.konu, placeholder: "\u0130stedi\u011Fini yaz ya da a\u015Fa\u011F\u0131dan se\u00E7", onChange: (e) => setF(Object.assign(Object.assign({}, f), { konu: e.target.value })) }),
                         React.createElement("div", { className: "gd-konular" },
@@ -2089,7 +2098,9 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                                         ? `BRANŞ DENEMESİ · ${(_b = dl.find((x) => x.id === seciliGorev.ders)) === null || _b === void 0 ? void 0 : _b.kisa}`
                                         : "GENEL DENEME")
                                     : (_c = dl.find((x) => x.id === seciliGorev.ders)) === null || _c === void 0 ? void 0 : _c.kisa,
-                            seciliGorev.tip === "tekrar" && ` · ${TEKRAR_AD[seciliGorev.kademe]}`),
+                            seciliGorev.tip === "tekrar" && ` · ${TEKRAR_AD[seciliGorev.kademe]}`,
+                            seciliGorev.tip === "calisma" && calismaBul(seciliGorev.calismaTuru)
+                                && ` · ${calismaBul(seciliGorev.calismaTuru).ad}`),
                         React.createElement("div", { className: "gd-k" }, seciliGorev.konu),
                         React.createElement("div", { className: "gd-b" },
                             GUNLER[gunIndeksi(seciliGorev.tarih)],
@@ -2103,6 +2114,9 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                 !salt && (React.createElement("div", { className: "gd-govde" },
                     React.createElement("div", { className: "gd-e" }, "ERTELE"),
                     React.createElement("div", { className: "gd-sure" }, [[1, "+1 gün"], [2, "+2 gün"], [7, "+1 hafta"]].map(([n, ad]) => (React.createElement("button", { key: n, className: "gd-s", onClick: () => ertele(seciliGorev, n) }, ad)))),
+                    seciliGorev.tip === "calisma" && (React.createElement(React.Fragment, null,
+                        React.createElement("div", { className: "gd-e" }, "\u00C7ALI\u015EMA T\u00DCR\u00DC"),
+                        React.createElement("div", { className: "gd-sure" }, CALISMA_TURU.map((c) => (React.createElement("button", { key: c.id, onClick: () => guncelle(seciliGorev.id, { calismaTuru: c.id }), className: seciliGorev.calismaTuru === c.id ? "gd-s etkin" : "gd-s" }, c.ad)))))),
                     React.createElement("div", { className: "gd-e" }, "G\u00D6REV ADI"),
                     React.createElement("input", { className: "gd-ara", value: seciliGorev.konu, onChange: (e) => guncelle(seciliGorev.id, { konu: e.target.value }) }),
                     React.createElement("div", { className: "gd-e" }, "ZAMAN"),
@@ -2171,7 +2185,10 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                             background: ton(gorevRenk(g), 0.22) } },
                         React.createElement("span", { className: "pt-tik" }),
                         React.createElement("span", null,
-                            React.createElement("b", { style: { color: koyult(gorevRenk(g)) } }, g.tip === "tekrar" ? TEKRAR_KISA[g.kademe] : gorevEtiket(g, dl)),
+                            React.createElement("b", { style: { color: koyult(gorevRenk(g)) } }, g.tip === "tekrar" ? TEKRAR_KISA[g.kademe]
+                                : g.tip === "calisma" && calismaBul(g.calismaTuru)
+                                    ? `${gorevEtiket(g, dl)} ${calismaBul(g.calismaTuru).kisa}`
+                                    : gorevEtiket(g, dl)),
                             " ",
                             g.konu))))))),
                     React.createElement("div", { className: "pt-saatler", style: { height: `calc(${bt - bs} * ${SY}mm)` } }, saatler.map((h) => (React.createElement("div", { className: "pt-saat", key: h, style: { height: `${SY}mm` } },
@@ -2197,7 +2214,10 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                                     } },
                                     React.createElement("span", { className: "pt-tik" }),
                                     React.createElement("span", { className: "pt-blok-y" },
-                                        React.createElement("b", { style: { color: g.tip === "deneme" ? "#fff" : koyult(gorevRenk(g)) } }, gorevEtiket(g, dl)),
+                                        React.createElement("b", { style: { color: g.tip === "deneme" ? "#fff" : koyult(gorevRenk(g)) } },
+                                            gorevEtiket(g, dl),
+                                            g.tip === "calisma" && calismaBul(g.calismaTuru)
+                                                && ` · ${calismaBul(g.calismaTuru).kisa}`),
                                         React.createElement("i", null, g.konu),
                                         React.createElement("u", null,
                                             g.saat,
@@ -2431,6 +2451,7 @@ function Izgara({ dl, gunler, gorevler, salt, setSecili, bosTikla, tasi, boyutla
             React.createElement("div", { className: "tkv-kose tkv-tg-a" }, "tekrar"),
             gunler.map((t) => (React.createElement("div", { className: "tkv-tumgun", key: "t" + t }, gorevler.filter((g) => g.tarih === t && !g.saat).map((g) => (React.createElement("button", { key: g.id, onClick: () => setSecili(g.id), style: { "--c": gorevRenk(g) }, className: `tkv-mini${g.tamam ? " bitti" : ""}` },
                 g.tip === "tekrar" && React.createElement("b", null, TEKRAR_KISA[g.kademe]),
+                g.tip === "calisma" && calismaBul(g.calismaTuru) && (React.createElement("i", { className: "ct-rozet" }, calismaBul(g.calismaTuru).kisa)),
                 g.konu)))))),
             React.createElement("div", { className: "tkv-saatler", style: { height: yuk } }, saatler.map((s) => (React.createElement("div", { className: "tkv-saat", key: s, style: { height: SAAT_YUK } },
                 String(s).padStart(2, "0"),
@@ -2460,7 +2481,8 @@ function Izgara({ dl, gunler, gorevler, salt, setSecili, bosTikla, tasi, boyutla
                         return (React.createElement("div", { key: g.id, style: stil, className: `tkv-blok${g.tamam ? " bitti" : ""}${g.tip === "tekrar" ? " tekrar" : ""}${g.tip === "deneme" ? " deneme" : ""}${g.tip === "etkinlik" ? " etkinlik" : ""}${s ? " suruklenen" : ""}`, onPointerDown: (e) => baslat(e, g, "tasi"), onClick: (e) => e.stopPropagation() },
                             React.createElement("span", { className: "tkv-blok-s" },
                                 g.saat,
-                                g.tip === "tekrar" ? ` · ${TEKRAR_KISA[g.kademe]}` : ""),
+                                g.tip === "tekrar" ? ` · ${TEKRAR_KISA[g.kademe]}` : "",
+                                g.tip === "calisma" && calismaBul(g.calismaTuru) && (React.createElement("i", { className: "ct-rozet" }, calismaBul(g.calismaTuru).kisa))),
                             React.createElement("span", { className: "tkv-blok-k" },
                                 React.createElement("b", null, gorevEtiket(g, dl)),
                                 " ",
@@ -3676,6 +3698,10 @@ function Stil() {
 .tkv-blok.bitti .tkv-blok-k{text-decoration:line-through;}
 .tkv-blok.suruklenen{z-index:10;cursor:grabbing;opacity:.9;
   box-shadow:0 6px 18px rgba(18,48,58,.22);}
+.ct-rozet{font-style:normal;font-size:7px;font-weight:900;letter-spacing:.3px;
+  color:#fff;background:var(--c);padding:1px 4px;border-radius:3px;margin-left:4px;
+  vertical-align:middle;}
+.tkv-mini .ct-rozet{margin:0 4px 0 0;}
 .tkv-blok-s{font-size:8px;font-weight:900;
   color:color-mix(in srgb, var(--c) 78%, #000);
   font-variant-numeric:tabular-nums;white-space:nowrap;}
