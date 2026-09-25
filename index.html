@@ -1770,7 +1770,7 @@ function Gorusmeler({ o, set, rol }) {
 /*  2. HAFTALIK PROGRAM                                                */
 /* ================================================================== */
 function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
-    var _a, _b;
+    var _a, _b, _c;
     const dl = dersleriGetir(o);
     const koc = rol === "yonetici";
     const [gorunum, setGorunum] = useState("hafta");
@@ -1779,7 +1779,6 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
     const [ekleAcik, setEkleAcik] = useState(false);
     const [sablonAcik, setSablonAcik] = useState(false);
     const [mesaj, setMesaj] = useState("");
-    const [konuAra, setKonuAra] = useState("");
     const [baski, setBaski] = useState(null);
     const yazdir = (tur) => {
         setBaski(tur);
@@ -1788,13 +1787,38 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
     const bosForm = {
         tip: "calisma", ders: dl[0].id, konu: "", tarih: bugun(), saat: "",
         sure: 45, tekrar: true, dnmTur: "genel", dnmAd: "",
-        kategori: "kitap", etkAd: "",
+        kategori: "kitap", etkAd: "", listeyeEkle: false,
     };
     const [f, setF] = useState(bosForm);
     const gorevler = gorevleriAl(o);
     const hafta = useMemo(() => Array.from({ length: 7 }, (_, i) => tarihEkle(odak, i)), [odak]);
     const haftaSayim = useMemo(() => gorevSayim(o, hafta), [o.gorevler, hafta]);
     const seciliGorev = gorevler.find((g) => g.id === secili) || null;
+    /* Bu derste daha önce yazılan görev adları — tekrar yazmamak için */
+    const sonKullanilan = useMemo(() => {
+        const q = f.konu.trim().toLocaleLowerCase("tr");
+        const gorulen = [];
+        [...gorevler].reverse().forEach((g) => {
+            if (g.ders !== f.ders || g.tip === "tekrar")
+                return;
+            if (!g.konu || gorulen.includes(g.konu))
+                return;
+            if (q && !g.konu.toLocaleLowerCase("tr").includes(q))
+                return;
+            if (gorulen.length < 6)
+                gorulen.push(g.konu);
+        });
+        return gorulen;
+    }, [gorevler, f.ders, f.konu]);
+    const eslesenKonular = useMemo(() => {
+        const q = f.konu.trim().toLocaleLowerCase("tr");
+        return (o.konular[f.ders] || []).filter((k) => !q || k.ad.toLocaleLowerCase("tr").includes(q));
+    }, [o.konular, f.ders, f.konu]);
+    const listedeVar = useMemo(() => {
+        const q = f.konu.trim().toLocaleLowerCase("tr");
+        return (o.konular[f.ders] || []).some((k) => k.ad.toLocaleLowerCase("tr") === q)
+            || sonKullanilan.some((a) => a.toLocaleLowerCase("tr") === q);
+    }, [o.konular, f.ders, f.konu, sonKullanilan]);
     const yaz = (liste) => set({ gorevler: liste });
     /* --- ekleme --- */
     const gorevEkle = () => {
@@ -1834,6 +1858,20 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
             tip: "calisma", kademe: null, tamam: false,
         };
         const yeni = f.tekrar ? [kok, ...tekrarUret(kok)] : [kok];
+        if (f.listeyeEkle) {
+            const mevcut = o.konular[f.ders] || [];
+            if (!mevcut.some((k) => k.ad === kok.konu)) {
+                set({
+                    gorevler: [...gorevler, ...yeni],
+                    konular: Object.assign(Object.assign({}, o.konular), { [f.ders]: [...mevcut,
+                            { id: `${f.ders}-${Date.now()}`, ad: kok.konu, asama: 0 }] }),
+                });
+                setF(Object.assign(Object.assign({}, bosForm), { ders: f.ders, tarih: f.tarih }));
+                setEkleAcik(false);
+                setMesaj(`"${kok.konu}" eklendi · konu listesine de yazıldı`);
+                return;
+            }
+        }
         yaz([...gorevler, ...yeni]);
         setF(Object.assign(Object.assign({}, bosForm), { ders: f.ders, tarih: f.tarih }));
         setEkleAcik(false);
@@ -2004,15 +2042,26 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                         React.createElement("div", { className: "gd-e" }, "DENEME ADI"),
                         React.createElement("input", { className: "gd-ara", value: f.dnmAd, placeholder: f.dnmTur === "bras" ? "Örn. Paragraf Denemesi 3" : "Örn. 3D TYT Deneme 4", onChange: (e) => setF(Object.assign(Object.assign({}, f), { dnmAd: e.target.value })) }))) : (React.createElement(React.Fragment, null,
                         React.createElement("div", { className: "gd-e" }, "DERS"),
-                        React.createElement(DersCipleri, { dersler: dl, secili: f.ders, sec: (id) => { setF(Object.assign(Object.assign({}, f), { ders: id, konu: "" })); setKonuAra(""); }, ayirici: o.seviye === "yks" ? DERSLER_TYT.length + DERSLER_CALISMA.length : 0 }),
-                        React.createElement("div", { className: "gd-e" }, "KONU"),
-                        React.createElement("input", { className: "gd-ara", value: konuAra, placeholder: "Konu ara\u2026", onChange: (e) => setKonuAra(e.target.value) }),
-                        React.createElement("div", { className: "gd-konular" }, (o.konular[f.ders] || [])
-                            .filter((k) => !konuAra.trim() ||
-                            k.ad.toLocaleLowerCase("tr").includes(konuAra.toLocaleLowerCase("tr")))
-                            .map((k) => (React.createElement("button", { key: k.id, className: f.konu === k.ad ? "gd-konu etkin" : "gd-konu", onClick: () => setF(Object.assign(Object.assign({}, f), { konu: k.ad })) },
-                            k.ad,
-                            k.asama > 0 && React.createElement("i", null, ASAMALAR[k.asama - 1]))))))),
+                        React.createElement(DersCipleri, { dersler: dl, secili: f.ders, sec: (id) => setF(Object.assign(Object.assign({}, f), { ders: id, konu: "" })), ayirici: o.seviye === "yks" ? DERSLER_TYT.length + DERSLER_CALISMA.length : 0 }),
+                        React.createElement("div", { className: "gd-e" }, "KONU / G\u00D6REV ADI"),
+                        React.createElement("input", { className: "gd-ara", value: f.konu, placeholder: "\u0130stedi\u011Fini yaz ya da a\u015Fa\u011F\u0131dan se\u00E7", onChange: (e) => setF(Object.assign(Object.assign({}, f), { konu: e.target.value })) }),
+                        React.createElement("div", { className: "gd-konular" },
+                            sonKullanilan.length > 0 && (React.createElement(React.Fragment, null,
+                                React.createElement("div", { className: "gd-ayrac" }, "SON KULLANDIKLARIN"),
+                                sonKullanilan.map((ad) => (React.createElement("button", { key: "s" + ad, className: f.konu === ad ? "gd-konu etkin" : "gd-konu", onClick: () => setF(Object.assign(Object.assign({}, f), { konu: ad })) }, ad))))),
+                            eslesenKonular.length > 0 && (React.createElement("div", { className: "gd-ayrac" }, "M\u00DCFREDAT KONULARI")),
+                            eslesenKonular.map((k) => (React.createElement("button", { key: k.id, className: f.konu === k.ad ? "gd-konu etkin" : "gd-konu", onClick: () => setF(Object.assign(Object.assign({}, f), { konu: k.ad })) },
+                                k.ad,
+                                k.asama > 0 && React.createElement("i", null, ASAMALAR[k.asama - 1])))),
+                            f.konu.trim() && !listedeVar && (React.createElement("div", { className: "gd-serbest" },
+                                "\u201C",
+                                f.konu.trim(),
+                                "\u201D serbest g\u00F6rev olarak eklenecek"))),
+                        f.konu.trim() && !listedeVar && (React.createElement("button", { className: f.listeyeEkle ? "gd-onay etkin" : "gd-onay", onClick: () => setF(Object.assign(Object.assign({}, f), { listeyeEkle: !f.listeyeEkle })) },
+                            React.createElement("span", { className: "onay-k" }, f.listeyeEkle ? "✓" : ""),
+                            "Bunu ", (_a = dl.find((x) => x.id === f.ders)) === null || _a === void 0 ? void 0 :
+                            _a.kisa,
+                            " konu listesine de ekle")))),
                     React.createElement("div", { className: "gd-e" }, "ZAMAN"),
                     React.createElement("div", { className: "gd-zaman" },
                         React.createElement("input", { type: "date", value: f.tarih, onChange: (e) => setF(Object.assign(Object.assign({}, f), { tarih: e.target.value })) }),
@@ -2037,9 +2086,9 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                                 ? etkinlikBul(seciliGorev.kategori).ad.toLocaleUpperCase("tr")
                                 : seciliGorev.tip === "deneme"
                                     ? (seciliGorev.ders
-                                        ? `BRANŞ DENEMESİ · ${(_a = dl.find((x) => x.id === seciliGorev.ders)) === null || _a === void 0 ? void 0 : _a.kisa}`
+                                        ? `BRANŞ DENEMESİ · ${(_b = dl.find((x) => x.id === seciliGorev.ders)) === null || _b === void 0 ? void 0 : _b.kisa}`
                                         : "GENEL DENEME")
-                                    : (_b = dl.find((x) => x.id === seciliGorev.ders)) === null || _b === void 0 ? void 0 : _b.kisa,
+                                    : (_c = dl.find((x) => x.id === seciliGorev.ders)) === null || _c === void 0 ? void 0 : _c.kisa,
                             seciliGorev.tip === "tekrar" && ` · ${TEKRAR_AD[seciliGorev.kademe]}`),
                         React.createElement("div", { className: "gd-k" }, seciliGorev.konu),
                         React.createElement("div", { className: "gd-b" },
@@ -2054,6 +2103,8 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                 !salt && (React.createElement("div", { className: "gd-govde" },
                     React.createElement("div", { className: "gd-e" }, "ERTELE"),
                     React.createElement("div", { className: "gd-sure" }, [[1, "+1 gün"], [2, "+2 gün"], [7, "+1 hafta"]].map(([n, ad]) => (React.createElement("button", { key: n, className: "gd-s", onClick: () => ertele(seciliGorev, n) }, ad)))),
+                    React.createElement("div", { className: "gd-e" }, "G\u00D6REV ADI"),
+                    React.createElement("input", { className: "gd-ara", value: seciliGorev.konu, onChange: (e) => guncelle(seciliGorev.id, { konu: e.target.value }) }),
                     React.createElement("div", { className: "gd-e" }, "ZAMAN"),
                     React.createElement("div", { className: "gd-zaman uclu-z" },
                         React.createElement("input", { type: "date", value: seciliGorev.tarih, onChange: (e) => guncelle(seciliGorev.id, { tarih: e.target.value }) }),
@@ -3530,6 +3581,11 @@ function Stil() {
   background:var(--tur-a);padding:2px 5px;border-radius:4px;flex-shrink:0;}
 .gd-konu.etkin{background:var(--tur);color:#fff;border-color:var(--tur);}
 .gd-konu.etkin i{background:rgba(255,255,255,.25);color:#fff;}
+.gd-ayrac{font-size:8px;font-weight:800;letter-spacing:1px;color:var(--sol);
+  padding:8px 2px 3px;}
+.gd-ayrac:first-child{padding-top:0;}
+.gd-serbest{font-size:11.5px;font-weight:700;color:var(--tur);
+  background:var(--tur-a);border-radius:8px;padding:9px 11px;margin-top:4px;}
 .gd-zaman{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
 .gd-zaman.uclu-z{grid-template-columns:1.3fr 1fr .8fr;}
 .gd-zaman input{background:var(--yzy2);border:1.5px solid transparent;border-radius:9px;
