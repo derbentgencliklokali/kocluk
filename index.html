@@ -1787,6 +1787,9 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
     const [sablonAcik, setSablonAcik] = useState(false);
     const [mesaj, setMesaj] = useState("");
     const [baski, setBaski] = useState(null);
+    const [kopyaAcik, setKopyaAcik] = useState(false);
+    const [kopyaKaynak, setKopyaKaynak] = useState(bugun());
+    const [kopyaHedef, setKopyaHedef] = useState([]);
     const yazdir = (tur) => {
         setBaski(tur);
         setTimeout(() => { window.print(); setBaski(null); }, 60);
@@ -1905,6 +1908,31 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
     };
     const guncelle = (id, deg) => yaz(gorevler.map((x) => (x.id === id ? Object.assign(Object.assign({}, x), deg) : x)));
     const ertele = (g, gun) => guncelle(g.id, { tarih: tarihEkle(g.tarih, gun) });
+    /* Bir görevi başka güne kopyala (tekrarsız) */
+    const goreviKopyala = (g, hedef) => {
+        yaz([...gorevler, Object.assign(Object.assign({}, g), { id: `g${Date.now()}`, tarih: hedef, tamam: false, kokId: undefined })]);
+        setMesaj(`"${g.konu}" ${kisaTarih(hedef)} gününe kopyalandı.`);
+    };
+    /* Bir günün tüm programını seçilen günlere yay */
+    const gunuKopyala = () => {
+        const kaynakGorevler = gorevler.filter((g) => g.tarih === kopyaKaynak && g.tip !== "tekrar");
+        if (!kaynakGorevler.length) {
+            setMesaj("Seçilen günde kopyalanacak görev yok.");
+            return;
+        }
+        if (!kopyaHedef.length) {
+            setMesaj("En az bir hedef gün seçin.");
+            return;
+        }
+        const yeni = [];
+        kopyaHedef.forEach((t, i) => kaynakGorevler.forEach((g, j) => {
+            yeni.push(Object.assign(Object.assign({}, g), { id: `g${Date.now()}-${i}-${j}`, tarih: t, tamam: false, kokId: undefined }));
+        }));
+        yaz([...gorevler, ...yeni]);
+        setKopyaAcik(false);
+        setKopyaHedef([]);
+        setMesaj(`${kaynakGorevler.length} görev, ${kopyaHedef.length} güne kopyalandı.`);
+    };
     const sil = (g) => {
         const cocuklar = gorevler.filter((x) => x.kokId === g.id);
         if (cocuklar.length && !window.confirm(`Bu konunun ${cocuklar.length} tekrarı da silinsin mi?`)) {
@@ -2000,9 +2028,35 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                     "\u015Eablonlar (",
                     uygunSablonlar.length,
                     ")"),
+                React.createElement("button", { className: "ufak", onClick: () => {
+                        setKopyaAcik(!kopyaAcik);
+                        setSablonAcik(false);
+                        setEkleAcik(false);
+                        setKopyaKaynak(hafta.includes(bugun()) ? bugun() : hafta[0]);
+                    } }, "G\u00FCn\u00FC kopyala"),
                 React.createElement("button", { className: "ufak", onClick: sablonKaydet }, "Bu haftay\u0131 \u015Fablon yap"))),
             mesaj && React.createElement("div", { className: "mesaj" }, mesaj),
             !salt && (React.createElement("div", { className: "ipuc", style: { marginBottom: 0 } }, "Bo\u015F bir saate dokunarak g\u00F6rev ekleyin \u00B7 g\u00F6revi s\u00FCr\u00FCkleyerek ta\u015F\u0131y\u0131n \u00B7 alt kenar\u0131ndan \u00E7ekerek s\u00FCresini uzat\u0131n"))),
+        kopyaAcik && !salt && (React.createElement("section", { className: "kart" },
+            React.createElement("div", { className: "etiket" }, "G\u00DCN\u00DC BA\u015EKA G\u00DCNLERE KOPYALA"),
+            React.createElement("div", { className: "kutucuk-a" }, "KAYNAK G\u00DCN"),
+            React.createElement("div", { className: "cipler" }, hafta.map((t) => {
+                const n = gorevler.filter((g) => g.tarih === t && g.tip !== "tekrar").length;
+                return (React.createElement("button", { key: t, onClick: () => setKopyaKaynak(t), className: kopyaKaynak === t ? "cip etkin" : "cip" },
+                    GUN_KISA[gunIndeksi(t)],
+                    " ",
+                    Number(t.split("-")[2]),
+                    n > 0 ? ` · ${n}` : ""));
+            })),
+            React.createElement("div", { className: "kutucuk-a", style: { marginTop: 14 } }, "HEDEF G\u00DCNLER"),
+            React.createElement("div", { className: "cipler" }, hafta.filter((t) => t !== kopyaKaynak).map((t) => (React.createElement("button", { key: t, onClick: () => setKopyaHedef(kopyaHedef.includes(t)
+                    ? kopyaHedef.filter((x) => x !== t) : [...kopyaHedef, t]), className: kopyaHedef.includes(t) ? "cip etkin" : "cip" },
+                GUN_KISA[gunIndeksi(t)],
+                " ",
+                Number(t.split("-")[2]))))),
+            React.createElement("button", { className: "link", style: { marginTop: 10 }, onClick: () => setKopyaHedef(hafta.filter((t) => t !== kopyaKaynak)) }, "Hepsini se\u00E7"),
+            React.createElement("button", { className: "birincil", onClick: gunuKopyala, disabled: !kopyaHedef.length }, kopyaHedef.length ? `${kopyaHedef.length} güne kopyala` : "Hedef gün seçin"),
+            React.createElement("div", { className: "ipuc" }, "Saatler korunur, tamamlanma i\u015Faretleri s\u0131f\u0131rlan\u0131r. Tekrarlar kopyalanmaz."))),
         sablonAcik && koc && (React.createElement("section", { className: "kart" },
             React.createElement("div", { className: "etiket" }, "\u015EABLONLAR"),
             uygunSablonlar.length === 0 ? (React.createElement(Bos, { baslik: "\u015Eablon yok", metin: "Bir haftan\u0131n plan\u0131n\u0131 kurup \u201CBu haftay\u0131 \u015Fablon yap\u201D diyerek kaydedin. Sonra tek dokunu\u015Fla ba\u015Fka \u00F6\u011Frencilere uygulayabilirsiniz." })) : (uygunSablonlar.map((s) => (React.createElement("div", { className: "sbl", key: s.id },
@@ -2124,6 +2178,12 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                         React.createElement("input", { type: "date", value: seciliGorev.tarih, onChange: (e) => guncelle(seciliGorev.id, { tarih: e.target.value }) }),
                         React.createElement("input", { type: "time", value: seciliGorev.saat || "", onChange: (e) => guncelle(seciliGorev.id, { saat: e.target.value }) }),
                         React.createElement("input", { type: "number", value: seciliGorev.sure, min: "15", step: "15", onChange: (e) => guncelle(seciliGorev.id, { sure: Number(e.target.value) || 15 }) })),
+                    seciliGorev.tip !== "tekrar" && (React.createElement(React.Fragment, null,
+                        React.createElement("div", { className: "gd-e" }, "BA\u015EKA G\u00DCNE KOPYALA"),
+                        React.createElement("div", { className: "gd-sure" }, hafta.filter((t) => t !== seciliGorev.tarih).map((t) => (React.createElement("button", { key: t, className: "gd-s", onClick: () => goreviKopyala(seciliGorev, t) },
+                            GUN_KISA[gunIndeksi(t)],
+                            " ",
+                            Number(t.split("-")[2]))))))),
                     React.createElement("div", { className: "gd-d" },
                         (() => {
                             const vd = videoBul(o, seciliGorev.ders, seciliGorev.konu);
@@ -2368,22 +2428,35 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                     altbilgi)));
         })()));
 }
-/* Aynı gün içinde çakışan görevleri yan yana yerleştirir */
+/* Çakışan görevleri yan yana yerleştirir.
+   Sadece gerçekten çakışan kümeler bölünür; ayrı saatlerdeki
+   görevler tam genişlikte kalır. */
 const yerlesimHesapla = (liste) => {
     const bas = (g) => saatDakika(g.saat);
     const son = (g) => saatDakika(g.saat) + Math.max(g.sure || 45, 15);
     const sirali = [...liste].sort((a, b) => bas(a) - bas(b));
-    const bitis = [];
     const sonuc = [];
+    let kume = [], sutunSon = [], kumeSon = -1;
+    const kumeyiKapat = () => {
+        const toplam = Math.max(sutunSon.length, 1);
+        kume.forEach((x) => sonuc.push(Object.assign(Object.assign({}, x), { toplam })));
+        kume = [];
+        sutunSon = [];
+        kumeSon = -1;
+    };
     sirali.forEach((g) => {
+        /* Önceki kümeyle hiç kesişmiyorsa yeni küme başlat */
+        if (kumeSon !== -1 && bas(g) >= kumeSon)
+            kumeyiKapat();
         let i = 0;
-        while (i < bitis.length && bitis[i] > bas(g))
+        while (i < sutunSon.length && sutunSon[i] > bas(g))
             i++;
-        bitis[i] = son(g);
-        sonuc.push({ g, sutun: i });
+        sutunSon[i] = son(g);
+        kume.push({ g, sutun: i });
+        kumeSon = Math.max(kumeSon, son(g));
     });
-    const toplam = Math.max(bitis.length, 1);
-    return sonuc.map((x) => (Object.assign(Object.assign({}, x), { toplam })));
+    kumeyiKapat();
+    return sonuc;
 };
 const dkSaat = (dk) => `${String(Math.floor(dk / 60)).padStart(2, "0")}:${String(dk % 60).padStart(2, "0")}`;
 function Izgara({ dl, gunler, gorevler, salt, setSecili, bosTikla, tasi, boyutla }) {
