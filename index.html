@@ -1790,6 +1790,10 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
     const [kopyaAcik, setKopyaAcik] = useState(false);
     const [kopyaKaynak, setKopyaKaynak] = useState(bugun());
     const [kopyaHedef, setKopyaHedef] = useState([]);
+    const [mola, setMola] = useState(15);
+    const [adet, setAdet] = useState(2);
+    const [kopyaSaat, setKopyaSaat] = useState("");
+    const [pano, setPano] = useState(null);
     const yazdir = (tur) => {
         setBaski(tur);
         setTimeout(() => { window.print(); setBaski(null); }, 60);
@@ -1913,6 +1917,72 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
         yaz([...gorevler, Object.assign(Object.assign({}, g), { id: `g${Date.now()}`, tarih: hedef, tamam: false, kokId: undefined })]);
         setMesaj(`"${g.konu}" ${kisaTarih(hedef)} gününe kopyalandı.`);
     };
+    /* Panoya al — takvimde bir saate dokununca yapıştırılır */
+    const panoyaAl = (g) => {
+        setPano(g);
+        setSecili(null);
+        setMesaj(`"${g.konu}" kopyalandı · yapıştırmak için takvimde bir saate dokunun`);
+    };
+    const yapistir = (tarih, saat) => {
+        if (!pano)
+            return;
+        yaz([...gorevler, Object.assign(Object.assign({}, pano), { id: `g${Date.now()}`, tarih, saat, tamam: false, kokId: undefined })]);
+        setMesaj(`"${pano.konu}" ${kisaTarih(tarih)} · ${saat} konumuna yapıştırıldı.`);
+    };
+    /* Görevi yanlara çekerek diğer günlere yay */
+    const yay = (id, adim) => {
+        const g = gorevler.find((x) => x.id === id);
+        if (!g || !adim)
+            return;
+        const i = hafta.indexOf(g.tarih);
+        if (i === -1)
+            return;
+        const yeni = [];
+        for (let k = 1; k <= Math.abs(adim); k++) {
+            const j = i + (adim > 0 ? k : -k);
+            if (j < 0 || j > hafta.length - 1)
+                break;
+            const t = hafta[j];
+            if (gorevler.some((x) => x.tarih === t && x.saat === g.saat && x.konu === g.konu))
+                continue;
+            yeni.push(Object.assign(Object.assign({}, g), { id: `g${Date.now()}-${k}`, tarih: t, tamam: false, kokId: undefined }));
+        }
+        if (!yeni.length) {
+            setMesaj("Yayılacak boş gün yok.");
+            return;
+        }
+        yaz([...gorevler, ...yeni]);
+        setMesaj(`"${g.konu}" ${yeni.length} güne yayıldı.`);
+    };
+    /* Aynı güne, aralarına mola koyarak çoğalt */
+    const cogalt = (g, adet, mola) => {
+        if (!g.saat) {
+            setMesaj("Saatsiz görev çoğaltılamaz, önce saat verin.");
+            return;
+        }
+        const sure = Math.max(g.sure || 45, 15);
+        const yeni = [];
+        let bas = saatDakika(g.saat);
+        for (let i = 0; i < adet; i++) {
+            bas = bas + sure + mola;
+            if (bas + sure > SAAT_SON * 60)
+                break;
+            yeni.push(Object.assign(Object.assign({}, g), { id: `g${Date.now()}-${i}`, saat: dkSaat(bas), tamam: false, kokId: undefined }));
+        }
+        if (!yeni.length) {
+            setMesaj("Gün sonuna sığmıyor.");
+            return;
+        }
+        yaz([...gorevler, ...yeni]);
+        setMesaj(`${yeni.length} kopya eklendi · aralarda ${mola} dk mola.`);
+    };
+    /* Aynı güne, seçilen saate kopyala */
+    const saateKopyala = (g, saat) => {
+        if (!saat)
+            return;
+        yaz([...gorevler, Object.assign(Object.assign({}, g), { id: `g${Date.now()}`, saat, tamam: false, kokId: undefined })]);
+        setMesaj(`"${g.konu}" ${saat} saatine kopyalandı.`);
+    };
     /* Bir günün tüm programını seçilen günlere yay */
     const gunuKopyala = () => {
         const kaynakGorevler = gorevler.filter((g) => g.tarih === kopyaKaynak && g.tip !== "tekrar");
@@ -2035,6 +2105,11 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                         setKopyaKaynak(hafta.includes(bugun()) ? bugun() : hafta[0]);
                     } }, "G\u00FCn\u00FC kopyala"),
                 React.createElement("button", { className: "ufak", onClick: sablonKaydet }, "Bu haftay\u0131 \u015Fablon yap"))),
+            pano && (React.createElement("div", { className: "pano" },
+                React.createElement("span", { className: "pano-y" },
+                    React.createElement("b", null, pano.konu),
+                    " panoda \u2014 yap\u0131\u015Ft\u0131rmak i\u00E7in takvimde bo\u015F bir saate dokunun"),
+                React.createElement("button", { className: "ufak", onClick: () => setPano(null) }, "Vazge\u00E7"))),
             mesaj && React.createElement("div", { className: "mesaj" }, mesaj),
             !salt && (React.createElement("div", { className: "ipuc", style: { marginBottom: 0 } }, "Bo\u015F bir saate dokunarak g\u00F6rev ekleyin \u00B7 g\u00F6revi s\u00FCr\u00FCkleyerek ta\u015F\u0131y\u0131n \u00B7 alt kenar\u0131ndan \u00E7ekerek s\u00FCresini uzat\u0131n"))),
         kopyaAcik && !salt && (React.createElement("section", { className: "kart" },
@@ -2178,6 +2253,23 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                         React.createElement("input", { type: "date", value: seciliGorev.tarih, onChange: (e) => guncelle(seciliGorev.id, { tarih: e.target.value }) }),
                         React.createElement("input", { type: "time", value: seciliGorev.saat || "", onChange: (e) => guncelle(seciliGorev.id, { saat: e.target.value }) }),
                         React.createElement("input", { type: "number", value: seciliGorev.sure, min: "15", step: "15", onChange: (e) => guncelle(seciliGorev.id, { sure: Number(e.target.value) || 15 }) })),
+                    seciliGorev.tip !== "tekrar" && seciliGorev.saat && (React.createElement(React.Fragment, null,
+                        React.createElement("div", { className: "gd-e" }, "AYNI G\u00DCNE \u00C7O\u011EALT"),
+                        React.createElement("div", { className: "gd-ikili" },
+                            React.createElement("div", null,
+                                React.createElement("div", { className: "gd-mini-e" }, "Aralarda mola"),
+                                React.createElement("div", { className: "gd-sure" }, [0, 10, 15, 30, 60].map((m) => (React.createElement("button", { key: m, onClick: () => setMola(m), className: mola === m ? "gd-s etkin" : "gd-s" }, m === 0 ? "yok" : `${m} dk`))))),
+                            React.createElement("div", null,
+                                React.createElement("div", { className: "gd-mini-e" }, "Ka\u00E7 kopya"),
+                                React.createElement("div", { className: "gd-sure" }, [1, 2, 3, 4, 5].map((n) => (React.createElement("button", { key: n, onClick: () => setAdet(n), className: adet === n ? "gd-s etkin" : "gd-s" }, n)))))),
+                        React.createElement("button", { className: "ikincil tam", style: { marginTop: 10 }, onClick: () => cogalt(seciliGorev, adet, mola) },
+                            "Pe\u015F pe\u015Fe ",
+                            adet,
+                            " kopya ekle"),
+                        React.createElement("div", { className: "gd-e" }, "BEL\u0130RL\u0130 B\u0130R SAATE KOPYALA"),
+                        React.createElement("div", { className: "gd-ikili" },
+                            React.createElement("input", { className: "gd-ara", type: "time", value: kopyaSaat, onChange: (e) => setKopyaSaat(e.target.value) }),
+                            React.createElement("button", { className: "ikincil", disabled: !kopyaSaat, onClick: () => saateKopyala(seciliGorev, kopyaSaat) }, "Kopyala")))),
                     seciliGorev.tip !== "tekrar" && (React.createElement(React.Fragment, null,
                         React.createElement("div", { className: "gd-e" }, "BA\u015EKA G\u00DCNE KOPYALA"),
                         React.createElement("div", { className: "gd-sure" }, hafta.filter((t) => t !== seciliGorev.tarih).map((t) => (React.createElement("button", { key: t, className: "gd-s", onClick: () => goreviKopyala(seciliGorev, t) },
@@ -2197,10 +2289,19 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                                 vd.toplam,
                                 ")")) : null;
                         })(),
+                        React.createElement("button", { className: "ikincil", onClick: () => panoyaAl(seciliGorev) }, "Kopyala"),
                         React.createElement("button", { className: "ufak tehlike", onClick: () => sil(seciliGorev) }, "Sil")))),
                 !salt && (React.createElement("div", { className: "gd-alt" },
                     React.createElement("button", { className: seciliGorev.tamam ? "birincil bitti-b" : "birincil", style: { margin: 0, width: "100%" }, onClick: () => tamamla(seciliGorev) }, seciliGorev.tamam ? "✓ Tamamlandı — geri al" : "Tamamlandı işaretle")))))),
-        React.createElement(Izgara, { dl: dl, gunler: gorunum === "hafta" ? hafta : [odak], gorevler: gorevler, salt: salt, setSecili: setSecili, bosTikla: (t, sa) => { setF(Object.assign(Object.assign({}, bosForm), { tarih: t, saat: sa })); setEkleAcik(true); setSablonAcik(false); }, tasi: (id, t, sa) => guncelle(id, { tarih: t, saat: sa }), boyutla: (id, sure) => guncelle(id, { sure }) }),
+        React.createElement(Izgara, { dl: dl, gunler: gorunum === "hafta" ? hafta : [odak], gorevler: gorevler, salt: salt, setSecili: setSecili, pano: pano, yay: yay, bosTikla: (t, sa) => {
+                if (pano) {
+                    yapistir(t, sa);
+                    return;
+                }
+                setF(Object.assign(Object.assign({}, bosForm), { tarih: t, saat: sa }));
+                setEkleAcik(true);
+                setSablonAcik(false);
+            }, tasi: (id, t, sa) => guncelle(id, { tarih: t, saat: sa }), boyutla: (id, sure) => guncelle(id, { sure }) }),
         React.createElement("div", { className: "cikti-d" },
             React.createElement("button", { className: "ikincil", onClick: () => yazdir("plan") }, "Plan\u0131 PDF olarak indir"),
             React.createElement("button", { className: "ikincil", onClick: () => yazdir("cizelge") }, "Soru takip \u00E7izelgesi (bo\u015F)")),
@@ -2459,7 +2560,7 @@ const yerlesimHesapla = (liste) => {
     return sonuc;
 };
 const dkSaat = (dk) => `${String(Math.floor(dk / 60)).padStart(2, "0")}:${String(dk % 60).padStart(2, "0")}`;
-function Izgara({ dl, gunler, gorevler, salt, setSecili, bosTikla, tasi, boyutla }) {
+function Izgara({ dl, gunler, gorevler, salt, setSecili, bosTikla, tasi, boyutla, pano, yay }) {
     const tabloRef = useRef(null);
     const [surukle, setSurukle] = useState(null);
     const sutunGen = () => {
@@ -2498,6 +2599,10 @@ function Izgara({ dl, gunler, gorevler, salt, setSecili, bosTikla, tasi, boyutla
             boyutla(s.id, Math.max(15, Math.min(480, s.sure + dk)));
             return;
         }
+        if (s.tip === "yay") {
+            yay(s.id, Math.round(s.dx / sutunGen()));
+            return;
+        }
         const i = gunler.indexOf(s.tarih);
         const adim = Math.round(s.dx / sutunGen());
         const yeniGun = gunler[Math.max(0, Math.min(gunler.length - 1, i + adim))] || s.tarih;
@@ -2531,7 +2636,7 @@ function Izgara({ dl, gunler, gorevler, salt, setSecili, bosTikla, tasi, boyutla
                 ":00")))),
             gunler.map((t) => {
                 const yer = yerlesimHesapla(gorevler.filter((g) => g.tarih === t && g.saat));
-                return (React.createElement("div", { className: `tkv-sutun${t === bugun() ? " bugun" : ""}`, key: "s" + t, style: { height: yuk, "--h": `${SAAT_YUK}px` }, onClick: (e) => hucreTikla(e, t) },
+                return (React.createElement("div", { className: `tkv-sutun${t === bugun() ? " bugun" : ""}${pano ? " pano" : ""}`, key: "s" + t, style: { height: yuk, "--h": `${SAAT_YUK}px` }, onClick: (e) => hucreTikla(e, t) },
                     t === bugun() && simdiDk >= 0 && simdiDk <= (SAAT_SON - SAAT_BAS) * 60 && (React.createElement("div", { className: "tkv-simdi", style: { top: (simdiDk / 60) * SAAT_YUK } })),
                     yer.map(({ g, sutun, toplam }) => {
                         const s = surukle && surukle.id === g.id && surukle.hareket ? surukle : null;
@@ -2548,6 +2653,9 @@ function Izgara({ dl, gunler, gorevler, salt, setSecili, bosTikla, tasi, boyutla
                         if (s && s.tip === "tasi") {
                             stil.transform = `translate(${s.dx}px, ${s.dy}px)`;
                         }
+                        else if (s && s.tip === "yay") {
+                            stil.width = `calc(${gen}% - 4px + ${Math.max(0, s.dx)}px)`;
+                        }
                         else if (s && s.tip === "boyut") {
                             stil.height = Math.max(20, (sure / 60) * SAAT_YUK - 2 + s.dy);
                         }
@@ -2560,7 +2668,13 @@ function Izgara({ dl, gunler, gorevler, salt, setSecili, bosTikla, tasi, boyutla
                                 React.createElement("b", null, gorevEtiket(g, dl)),
                                 " ",
                                 g.konu),
-                            !salt && (React.createElement("span", { className: "tkv-tut", onPointerDown: (e) => baslat(e, g, "boyut") }))));
+                            !salt && (React.createElement(React.Fragment, null,
+                                React.createElement("span", { className: "tkv-tut", onPointerDown: (e) => baslat(e, g, "boyut") }),
+                                React.createElement("span", { className: "tkv-yan sol", title: "Di\u011Fer g\u00FCnlere yay", onPointerDown: (e) => baslat(e, g, "yay") }),
+                                React.createElement("span", { className: "tkv-yan sag", title: "Di\u011Fer g\u00FCnlere yay", onPointerDown: (e) => baslat(e, g, "yay") }),
+                                s && s.tip === "yay" && Math.abs(Math.round(s.dx / sutunGen())) > 0 && (React.createElement("span", { className: "tkv-yay-sayi" },
+                                    Math.abs(Math.round(s.dx / sutunGen())),
+                                    " g\u00FCn"))))));
                     })));
             }))));
 }
@@ -3181,6 +3295,11 @@ function Analiz({ o, set, salt, videoAc }) {
                                 });
                             } }, "\u25B6 Video")),
                         !salt && (React.createElement("button", { className: "ufak", onClick: () => planaEkle(x) }, "Plana ekle")))))),
+                pano && (React.createElement("div", { className: "pano" },
+                    React.createElement("span", { className: "pano-y" },
+                        React.createElement("b", null, pano.konu),
+                        " panoda \u2014 yap\u0131\u015Ft\u0131rmak i\u00E7in takvimde bo\u015F bir saate dokunun"),
+                    React.createElement("button", { className: "ufak", onClick: () => setPano(null) }, "Vazge\u00E7"))),
                 mesaj && React.createElement("div", { className: "mesaj" }, mesaj)),
             React.createElement("section", { className: "kart" },
                 React.createElement("div", { className: "etiket" }, "NE YAPILMALI"),
@@ -3688,6 +3807,9 @@ function Stil() {
   color:var(--met);outline:none;width:100%;}
 .gd-zaman input:focus{border-color:var(--tur);background:#fff;}
 .gd-sure{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;}
+.gd-ikili{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;}
+.gd-ikili .gd-ara{margin-bottom:0;}
+.gd-mini-e{font-size:9px;font-weight:700;color:var(--sol);}
 .gd-s{background:var(--yzy2);border:1.5px solid transparent;border-radius:99px;
   padding:6px 11px;font-family:inherit;font-weight:800;font-size:11px;
   color:var(--sol);cursor:pointer;}
@@ -3783,6 +3905,21 @@ function Stil() {
 .tkv-blok-k b{color:color-mix(in srgb, var(--c) 75%, #000);}
 .tkv-tut{position:absolute;left:0;right:0;bottom:0;height:9px;cursor:ns-resize;
   touch-action:none;}
+.tkv-yan{position:absolute;top:0;bottom:9px;width:7px;cursor:ew-resize;
+  touch-action:none;z-index:2;}
+.tkv-yan.sol{left:0;} .tkv-yan.sag{right:0;}
+.tkv-yan::after{content:"";position:absolute;top:50%;width:3px;height:16px;
+  transform:translateY(-50%);border-radius:2px;opacity:0;transition:opacity .12s;
+  background:color-mix(in srgb, var(--c) 70%, #fff);}
+.tkv-yan.sol::after{left:1px;} .tkv-yan.sag::after{right:1px;}
+.tkv-blok:hover .tkv-yan::after{opacity:1;}
+.tkv-yay-sayi{position:absolute;top:2px;right:4px;font-size:8px;font-weight:900;
+  color:#fff;background:var(--c);padding:1px 5px;border-radius:4px;z-index:4;}
+.tkv-sutun.pano{cursor:copy;background-color:rgba(6,120,140,.05);}
+.pano{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 13px;
+  background:var(--tur-a);border:1px dashed var(--tur);border-radius:12px;}
+.pano-y{flex:1;font-size:12px;font-weight:600;color:var(--tur);line-height:1.4;}
+.pano-y b{font-weight:800;}
 .tkv-tut::after{content:"";position:absolute;left:50%;bottom:2px;width:18px;height:2px;
   transform:translateX(-50%);border-radius:2px;
   background:color-mix(in srgb, var(--c) 55%, #fff);}
