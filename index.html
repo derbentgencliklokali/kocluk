@@ -4161,7 +4161,7 @@ function Stil() {
 
 /* ---------- masaüstü ---------- */
 @media (min-width: 900px) {
-  .kok{max-width:1400px;padding-bottom:36px;}
+  .kok{max-width:none;padding-bottom:36px;}
 
   .ust{padding:18px 28px;gap:14px;}
   .ust-ad{font-size:19px;}
@@ -4177,10 +4177,11 @@ function Stil() {
   .alt-b{flex:0 0 auto;font-size:12.5px;letter-spacing:.2px;
     padding:10px 20px;border-radius:99px;}
 
-  .govde{padding:22px 28px;gap:16px;max-width:1180px;margin:0 auto;}
+  .govde{padding:22px 32px;gap:16px;max-width:none;margin:0;}
 
-  /* koç paneli: kartlar iki sütun */
-  .panel-govde{max-width:none;display:grid;grid-template-columns:1fr 1fr;
+  /* koç paneli: ekran genişliğine göre sütun sayısı */
+  .panel-govde{max-width:none;display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(330px, 1fr));
     align-items:start;}
   .panel-govde > *:not(.ogr-kart){grid-column:1 / -1;}
   .ogr-kart{height:100%;}
@@ -4194,6 +4195,7 @@ function Stil() {
   .hk-ad{font-size:19px;}
 
   .ikili-g,.uclu{gap:12px;}
+  .oneri,.tavsiye,.bos-yorum,.grs-m{max-width:900px;}
   .isaret-liste,.konu-sec{max-height:420px;}
   .vid-kutu{max-width:760px;}
   .sohbet-kart{min-height:340px;}
@@ -4203,20 +4205,15 @@ function Stil() {
   .tkv-blok-k{font-size:10.5px;}
   .tkv-tablo{grid-template-columns:56px repeat(var(--gun), minmax(120px,1fr));}
   .tkv{max-height:calc(100vh - 250px);min-height:460px;}
+  .tkv-tablo{grid-template-columns:56px repeat(var(--gun), minmax(0,1fr));}
   .gd{max-width:460px;}
   .ogr-dugmeler .ufak{padding:9px 13px;font-size:11.5px;}
   .cip{padding:10px 16px;font-size:11.5px;}
   .konu-ad,.oneri-b,.isaret-ad{font-size:13.5px;}
 }
 
-/* çok geniş ekranlarda panel üç sütun */
-@media (min-width: 1240px) {
-  .panel-govde{grid-template-columns:repeat(3,1fr);}
-}
 @media (min-width: 1560px) {
-  .kok{max-width:1720px;}
-  .govde{max-width:1480px;}
-  .panel-govde{grid-template-columns:repeat(4,1fr);}
+  .govde{padding:24px 40px;}
 }
 `));
 }
