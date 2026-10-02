@@ -1794,6 +1794,8 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
     const [adet, setAdet] = useState(2);
     const [kopyaSaat, setKopyaSaat] = useState("");
     const [pano, setPano] = useState(null);
+    const [gecmis, setGecmis] = useState([]);
+    const [ileri, setIleri] = useState([]);
     const yazdir = (tur) => {
         setBaski(tur);
         setTimeout(() => { window.print(); setBaski(null); }, 60);
@@ -1808,6 +1810,26 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
     const hafta = useMemo(() => Array.from({ length: 7 }, (_, i) => tarihEkle(odak, i)), [odak]);
     const haftaSayim = useMemo(() => gorevSayim(o, hafta), [o.gorevler, hafta]);
     const seciliGorev = gorevler.find((g) => g.id === secili) || null;
+    /* Ctrl+Z / Ctrl+Y */
+    useEffect(() => {
+        if (salt)
+            return;
+        const tus = (e) => {
+            if (!(e.ctrlKey || e.metaKey))
+                return;
+            const k = e.key.toLowerCase();
+            if (k === "z" && !e.shiftKey) {
+                e.preventDefault();
+                geriAl();
+            }
+            else if (k === "y" || (k === "z" && e.shiftKey)) {
+                e.preventDefault();
+                ileriGit();
+            }
+        };
+        window.addEventListener("keydown", tus);
+        return () => window.removeEventListener("keydown", tus);
+    });
     /* Bu derste daha önce yazılan görev adları — tekrar yazmamak için */
     const sonKullanilan = useMemo(() => {
         const q = f.konu.trim().toLocaleLowerCase("tr");
@@ -1833,7 +1855,32 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
         return (o.konular[f.ders] || []).some((k) => k.ad.toLocaleLowerCase("tr") === q)
             || sonKullanilan.some((a) => a.toLocaleLowerCase("tr") === q);
     }, [o.konular, f.ders, f.konu, sonKullanilan]);
-    const yaz = (liste) => set({ gorevler: liste });
+    /* Her değişiklik geçmişe yazılır — geri al / ileri git için */
+    const yaz = (liste, ekstra) => {
+        setGecmis((g) => [...g.slice(-29), gorevler]);
+        setIleri([]);
+        set(Object.assign({ gorevler: liste }, (ekstra || {})));
+    };
+    const geriAl = () => {
+        if (!gecmis.length)
+            return;
+        const son = gecmis[gecmis.length - 1];
+        setGecmis(gecmis.slice(0, -1));
+        setIleri([gorevler, ...ileri].slice(0, 30));
+        set({ gorevler: son });
+        setSecili(null);
+        setMesaj("Son işlem geri alındı.");
+    };
+    const ileriGit = () => {
+        if (!ileri.length)
+            return;
+        const ilk = ileri[0];
+        setIleri(ileri.slice(1));
+        setGecmis([...gecmis, gorevler]);
+        set({ gorevler: ilk });
+        setSecili(null);
+        setMesaj("İşlem yeniden uygulandı.");
+    };
     /* --- ekleme --- */
     const gorevEkle = () => {
         var _a;
@@ -1875,8 +1922,7 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
         if (f.listeyeEkle) {
             const mevcut = o.konular[f.ders] || [];
             if (!mevcut.some((k) => k.ad === kok.konu)) {
-                set({
-                    gorevler: [...gorevler, ...yeni],
+                yaz([...gorevler, ...yeni], {
                     konular: Object.assign(Object.assign({}, o.konular), { [f.ders]: [...mevcut,
                             { id: `${f.ders}-${Date.now()}`, ad: kok.konu, asama: 0 }] }),
                 });
@@ -2071,7 +2117,8 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
     return (React.createElement(React.Fragment, null,
         React.createElement("section", { className: "kart tk-ust-kart" },
             React.createElement("div", { className: "tk-nav" },
-                React.createElement("button", { className: "tk-ok", onClick: () => setOdak(tarihEkle(odak, -7)) }, "\u2039"),
+                React.createElement("button", { className: "tk-ok hafta", title: "Bir hafta geri", onClick: () => setOdak(tarihEkle(odak, -7)) }, "\u00AB"),
+                React.createElement("button", { className: "tk-ok", title: "Bir g\u00FCn geri", onClick: () => setOdak(tarihEkle(odak, -1)) }, "\u2039"),
                 React.createElement("div", { className: "tk-aralik" },
                     React.createElement("div", { className: "tk-aralik-b" }, gorunum === "hafta"
                         ? `${kisaTarih(hafta[0])} – ${kisaTarih(hafta[6])}`
@@ -2080,16 +2127,21 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                         haftaSayim.biten,
                         " / ",
                         haftaSayim.toplam,
-                        " g\u00F6rev tamamland\u0131")),
-                React.createElement("button", { className: "tk-ok", onClick: () => setOdak(tarihEkle(odak, 7)) }, "\u203A")),
+                        " g\u00F6rev tamamland\u0131"),
+                    React.createElement("input", { className: "tk-tarih", type: "date", value: odak, title: "Ba\u015Flang\u0131\u00E7 g\u00FCn\u00FCn\u00FC se\u00E7", onChange: (e) => e.target.value && setOdak(e.target.value) })),
+                React.createElement("button", { className: "tk-ok", title: "Bir g\u00FCn ileri", onClick: () => setOdak(tarihEkle(odak, 1)) }, "\u203A"),
+                React.createElement("button", { className: "tk-ok hafta", title: "Bir hafta ileri", onClick: () => setOdak(tarihEkle(odak, 7)) }, "\u00BB")),
             React.createElement("div", { className: "tk-arac" },
                 React.createElement("div", { className: "cipler yapisik" },
                     [["hafta", "HAFTA"], ["gun", "GÜN"]].map(([id, ad]) => (React.createElement("button", { key: id, onClick: () => setGorunum(id), className: gorunum === id ? "cip etkin" : "cip" }, ad))),
                     React.createElement("button", { className: "cip", onClick: () => setOdak(bugun()) }, "BUG\u00DCN")),
-                !salt && (React.createElement("button", { className: "ikincil", onClick: () => {
-                        setEkleAcik(!ekleAcik);
-                        setSablonAcik(false);
-                    } }, ekleAcik ? "Vazgeç" : "+ Görev"))),
+                !salt && (React.createElement("div", { className: "tk-sag" },
+                    React.createElement("button", { className: "geri-b", onClick: geriAl, disabled: !gecmis.length, title: "Geri al (Ctrl+Z)", "aria-label": "Geri al" }, "\u21B6"),
+                    React.createElement("button", { className: "geri-b", onClick: ileriGit, disabled: !ileri.length, title: "\u0130leri git (Ctrl+Y)", "aria-label": "\u0130leri git" }, "\u21B7"),
+                    React.createElement("button", { className: "ikincil", onClick: () => {
+                            setEkleAcik(!ekleAcik);
+                            setSablonAcik(false);
+                        } }, ekleAcik ? "Vazgeç" : "+ Görev")))),
             koc && (React.createElement("div", { className: "tk-arac", style: { marginTop: 10 } },
                 React.createElement("button", { className: "ufak", onClick: () => {
                         setSablonAcik(!sablonAcik);
@@ -3754,10 +3806,15 @@ function Stil() {
 /* takvim */
 .tk-ust-kart{padding:14px 16px;}
 .tk-nav{display:flex;align-items:center;gap:10px;}
-.tk-ok{width:34px;height:34px;flex-shrink:0;border-radius:11px;background:var(--yzy2);
-  border:none;color:var(--tur);font-size:20px;line-height:1;cursor:pointer;
+.tk-ok{width:32px;height:34px;flex-shrink:0;border-radius:10px;background:var(--yzy2);
+  border:none;color:var(--tur);font-size:19px;line-height:1;cursor:pointer;
   font-family:inherit;font-weight:800;}
-.tk-ok:hover{background:var(--tur-a);}
+.tk-ok.hafta{font-size:15px;opacity:.75;}
+.tk-ok:hover{background:var(--tur-a);opacity:1;}
+.tk-tarih{margin-top:6px;background:var(--yzy2);border:1px solid transparent;
+  border-radius:8px;padding:4px 8px;font-family:inherit;font-weight:700;
+  font-size:11px;color:var(--sol);outline:none;cursor:pointer;}
+.tk-tarih:hover,.tk-tarih:focus{border-color:var(--tur);color:var(--met);}
 .tk-aralik{flex:1;text-align:center;min-width:0;}
 .tk-aralik-b{font-size:14.5px;font-weight:800;letter-spacing:-.2px;}
 .tk-aralik-a{font-size:10.5px;font-weight:700;color:var(--sol);margin-top:2px;}
@@ -3916,6 +3973,12 @@ function Stil() {
 .tkv-yay-sayi{position:absolute;top:2px;right:4px;font-size:8px;font-weight:900;
   color:#fff;background:var(--c);padding:1px 5px;border-radius:4px;z-index:4;}
 .tkv-sutun.pano{cursor:copy;background-color:rgba(6,120,140,.05);}
+.tk-sag{display:flex;align-items:center;gap:6px;}
+.geri-b{width:36px;height:36px;border-radius:10px;background:var(--yzy2);
+  border:1px solid transparent;color:var(--tur);font-size:17px;line-height:1;
+  cursor:pointer;font-family:inherit;font-weight:700;}
+.geri-b:hover:not(:disabled){border-color:var(--tur);}
+.geri-b:disabled{opacity:.3;cursor:not-allowed;}
 .pano{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 13px;
   background:var(--tur-a);border:1px dashed var(--tur);border-radius:12px;}
 .pano-y{flex:1;font-size:12px;font-weight:600;color:var(--tur);line-height:1.4;}
