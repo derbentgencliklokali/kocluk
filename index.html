@@ -711,7 +711,9 @@ const GUNLER = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumart
 const GUN_KISA = ["PZT", "SAL", "ÇAR", "PER", "CUM", "CMT", "PAZ"];
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
     "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-const SAAT_BAS = 5, SAAT_SON = 24, SAAT_YUK = 36;
+const SAAT_BAS = 5, SAAT_SON = 24, SAAT_YUK = 44;
+const YAKIN_KADEME = [28, 36, 44, 56, 72, 96];
+const BLOK_ENAZ = 24; /* metnin her zaman sığacağı en küçük blok yüksekliği */
 const SURE_SECENEK = [15, 30, 45, 60, 90, 120];
 /* Ders renkleri — takvimde ayırt etmek için */
 const DERS_RENK = {
@@ -1805,6 +1807,7 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
     const dl = dersleriGetir(o);
     const koc = rol === "yonetici";
     const [gorunum, setGorunum] = useState("hafta");
+    const [sy, setSy] = useState(SAAT_YUK);
     const [odak, setOdak] = useState(bugun());
     const [secili, setSecili] = useState(null);
     const [ekleAcik, setEkleAcik] = useState(false);
@@ -2194,7 +2197,10 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
             React.createElement("div", { className: "tk-arac" },
                 React.createElement("div", { className: "cipler yapisik" },
                     [["hafta", "HAFTA"], ["gun", "GÜN"]].map(([id, ad]) => (React.createElement("button", { key: id, onClick: () => setGorunum(id), className: gorunum === id ? "cip etkin" : "cip" }, ad))),
-                    React.createElement("button", { className: "cip", onClick: () => setOdak(bugun()) }, "BUG\u00DCN")),
+                    React.createElement("button", { className: "cip", onClick: () => setOdak(bugun()) }, "BUG\u00DCN"),
+                    React.createElement("span", { className: "zum" },
+                        React.createElement("button", { className: "zum-b", title: "Uzakla\u015Ft\u0131r", disabled: sy <= YAKIN_KADEME[0], onClick: () => setSy(YAKIN_KADEME[Math.max(0, YAKIN_KADEME.indexOf(sy) - 1)]) }, "\u2212"),
+                        React.createElement("button", { className: "zum-b", title: "Yak\u0131nla\u015Ft\u0131r", disabled: sy >= YAKIN_KADEME[YAKIN_KADEME.length - 1], onClick: () => setSy(YAKIN_KADEME[Math.min(YAKIN_KADEME.length - 1, YAKIN_KADEME.indexOf(sy) + 1)]) }, "+"))),
                 !salt && (React.createElement("div", { className: "tk-sag" },
                     React.createElement("button", { className: "geri-b", onClick: geriAl, disabled: !gecmis.length, title: "Geri al (Ctrl+Z)", "aria-label": "Geri al" }, "\u21B6"),
                     React.createElement("button", { className: "geri-b", onClick: ileriGit, disabled: !ileri.length, title: "\u0130leri git (Ctrl+Y)", "aria-label": "\u0130leri git" }, "\u21B7"),
@@ -2412,7 +2418,7 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                         React.createElement("button", { className: "ufak tehlike", onClick: () => sil(seciliGorev) }, "Sil")))),
                 !salt && (React.createElement("div", { className: "gd-alt" },
                     React.createElement("button", { className: seciliGorev.tamam ? "birincil bitti-b" : "birincil", style: { margin: 0, width: "100%" }, onClick: () => tamamla(seciliGorev) }, seciliGorev.tamam ? "✓ Tamamlandı — geri al" : "Tamamlandı işaretle")))))),
-        React.createElement(Izgara, { dl: dl, gunler: gorunum === "hafta" ? hafta : [odak], gorevler: gorevler, salt: salt, setSecili: setSecili, pano: pano, yay: yay, gunKopyala: gunuPanoyaAl, bosTikla: (t, sa) => {
+        React.createElement(Izgara, { dl: dl, gunler: gorunum === "hafta" ? hafta : [odak], gorevler: gorevler, salt: salt, setSecili: setSecili, pano: pano, yay: yay, gunKopyala: gunuPanoyaAl, sy: sy, bosTikla: (t, sa) => {
                 if (pano) {
                     yapistir(t, sa);
                     return;
@@ -2679,7 +2685,7 @@ const yerlesimHesapla = (liste) => {
     return sonuc;
 };
 const dkSaat = (dk) => `${String(Math.floor(dk / 60)).padStart(2, "0")}:${String(dk % 60).padStart(2, "0")}`;
-function Izgara({ dl, gunler, gorevler, salt, setSecili, bosTikla, tasi, boyutla, pano, yay, gunKopyala }) {
+function Izgara({ dl, gunler, gorevler, salt, setSecili, bosTikla, tasi, boyutla, pano, yay, gunKopyala, sy }) {
     const tabloRef = useRef(null);
     const [surukle, setSurukle] = useState(null);
     const sutunGen = () => {
@@ -2713,7 +2719,7 @@ function Izgara({ dl, gunler, gorevler, salt, setSecili, bosTikla, tasi, boyutla
             setSecili(s.id);
             return;
         }
-        const dk = Math.round((s.dy / SAAT_YUK) * 60 / 15) * 15;
+        const dk = Math.round((s.dy / sy) * 60 / 15) * 15;
         if (s.tip === "boyut") {
             boyutla(s.id, Math.max(15, Math.min(480, s.sure + dk)));
             return;
@@ -2732,11 +2738,11 @@ function Izgara({ dl, gunler, gorevler, salt, setSecili, bosTikla, tasi, boyutla
         if (salt || surukle)
             return;
         const kutu = e.currentTarget.getBoundingClientRect();
-        const dk = SAAT_BAS * 60 + ((e.clientY - kutu.top) / SAAT_YUK) * 60;
+        const dk = SAAT_BAS * 60 + ((e.clientY - kutu.top) / sy) * 60;
         bosTikla(tarih, dkSaat(Math.max(SAAT_BAS * 60, Math.round(dk / 30) * 30)));
     };
     const saatler = Array.from({ length: SAAT_SON - SAAT_BAS }, (_, i) => SAAT_BAS + i);
-    const yuk = (SAAT_SON - SAAT_BAS) * SAAT_YUK;
+    const yuk = (SAAT_SON - SAAT_BAS) * sy;
     const simdi = new Date();
     const simdiDk = simdi.getHours() * 60 + simdi.getMinutes() - SAAT_BAS * 60;
     return (React.createElement("div", { className: "tkv", onPointerMove: ilerle, onPointerUp: bitir, onPointerCancel: bitir },
@@ -2751,24 +2757,26 @@ function Izgara({ dl, gunler, gorevler, salt, setSecili, bosTikla, tasi, boyutla
                 g.tip === "tekrar" && React.createElement("b", null, TEKRAR_KISA[g.kademe]),
                 g.tip === "calisma" && calismaBul(g.calismaTuru) && (React.createElement("i", { className: "ct-rozet" }, calismaBul(g.calismaTuru).kisa)),
                 g.konu)))))),
-            React.createElement("div", { className: "tkv-saatler", style: { height: yuk } }, saatler.map((s) => (React.createElement("div", { className: "tkv-saat", key: s, style: { height: SAAT_YUK } },
+            React.createElement("div", { className: "tkv-saatler", style: { height: yuk } }, saatler.map((s) => (React.createElement("div", { className: "tkv-saat", key: s, style: { height: sy } },
                 String(s).padStart(2, "0"),
                 ":00")))),
             gunler.map((t) => {
                 const yer = yerlesimHesapla(gorevler.filter((g) => g.tarih === t && g.saat));
-                return (React.createElement("div", { className: `tkv-sutun${t === bugun() ? " bugun" : ""}${pano ? " pano" : ""}`, key: "s" + t, style: { height: yuk, "--h": `${SAAT_YUK}px` }, onClick: (e) => hucreTikla(e, t) },
-                    t === bugun() && simdiDk >= 0 && simdiDk <= (SAAT_SON - SAAT_BAS) * 60 && (React.createElement("div", { className: "tkv-simdi", style: { top: (simdiDk / 60) * SAAT_YUK } })),
+                return (React.createElement("div", { className: `tkv-sutun${t === bugun() ? " bugun" : ""}${pano ? " pano" : ""}`, key: "s" + t, style: { height: yuk, "--h": `${sy}px` }, onClick: (e) => hucreTikla(e, t) },
+                    t === bugun() && simdiDk >= 0 && simdiDk <= (SAAT_SON - SAAT_BAS) * 60 && (React.createElement("div", { className: "tkv-simdi", style: { top: (simdiDk / 60) * sy } })),
                     yer.map(({ g, sutun, toplam }) => {
                         const s = surukle && surukle.id === g.id && surukle.hareket ? surukle : null;
                         const bas = saatDakika(g.saat) - SAAT_BAS * 60;
                         const sure = Math.max(15, g.sure || 45);
                         const gen = 100 / toplam;
-                        const yuk = (sure / 60) * SAAT_YUK;
-                        const kisa = yuk < 30;
+                        const gercek = (sure / 60) * sy;
+                        const yuk = Math.max(gercek - 2, BLOK_ENAZ);
+                        const kisa = yuk < 34;
+                        const tasan = gercek - 2 < BLOK_ENAZ;
                         const stil = {
                             "--c": gorevRenk(g),
-                            top: (bas / 60) * SAAT_YUK,
-                            height: (sure / 60) * SAAT_YUK - 2,
+                            top: (bas / 60) * sy,
+                            height: yuk,
                             left: `calc(${sutun * gen}% + 2px)`,
                             width: `calc(${gen}% - 4px)`,
                         };
@@ -2779,9 +2787,9 @@ function Izgara({ dl, gunler, gorevler, salt, setSecili, bosTikla, tasi, boyutla
                             stil.width = `calc(${gen}% - 4px + ${Math.max(0, s.dx)}px)`;
                         }
                         else if (s && s.tip === "boyut") {
-                            stil.height = Math.max(20, (sure / 60) * SAAT_YUK - 2 + s.dy);
+                            stil.height = Math.max(BLOK_ENAZ, gercek - 2 + s.dy);
                         }
-                        return (React.createElement("div", { key: g.id, style: stil, title: `${g.saat} · ${g.konu}`, className: `tkv-blok${kisa ? " kisa" : ""}${g.tamam ? " bitti" : ""}${g.tip === "tekrar" ? " tekrar" : ""}${g.tip === "deneme" ? " deneme" : ""}${g.tip === "etkinlik" ? " etkinlik" : ""}${s ? " suruklenen" : ""}`, onPointerDown: (e) => baslat(e, g, "tasi"), onClick: (e) => e.stopPropagation() },
+                        return (React.createElement("div", { key: g.id, style: stil, title: `${g.saat} · ${g.konu}`, className: `tkv-blok${kisa ? " kisa" : ""}${tasan ? " tasan" : ""}${g.tamam ? " bitti" : ""}${g.tip === "tekrar" ? " tekrar" : ""}${g.tip === "deneme" ? " deneme" : ""}${g.tip === "etkinlik" ? " etkinlik" : ""}${s ? " suruklenen" : ""}`, onPointerDown: (e) => baslat(e, g, "tasi"), onClick: (e) => e.stopPropagation() },
                             React.createElement("span", { className: "tkv-blok-s" },
                                 g.saat,
                                 g.tip === "tekrar" ? ` · ${TEKRAR_KISA[g.kademe]}` : "",
@@ -3558,17 +3566,6 @@ function Analiz({ o, set, salt, videoAc }) {
                                 });
                             } }, "\u25B6 Video")),
                         !salt && (React.createElement("button", { className: "ufak", onClick: () => planaEkle(x) }, "Plana ekle")))))),
-                pano && (React.createElement("div", { className: "pano" },
-                    React.createElement("span", { className: "pano-y" }, pano.gun
-                        ? React.createElement(React.Fragment, null,
-                            kisaTarih(pano.tarih),
-                            " g\u00FCn\u00FC panoda (",
-                            pano.liste.length,
-                            " g\u00F6rev) \u2014 yap\u0131\u015Ft\u0131rmak i\u00E7in hedef g\u00FCn\u00FCn herhangi bir saatine dokunun")
-                        : React.createElement(React.Fragment, null,
-                            React.createElement("b", null, pano.konu),
-                            " panoda \u2014 yap\u0131\u015Ft\u0131rmak i\u00E7in takvimde bo\u015F bir saate dokunun")),
-                    React.createElement("button", { className: "ufak", onClick: () => setPano(null) }, "Vazge\u00E7"))),
                 mesaj && React.createElement("div", { className: "mesaj" }, mesaj)),
             React.createElement("section", { className: "kart" },
                 React.createElement("div", { className: "etiket" }, "NE YAPILMALI"),
@@ -4156,10 +4153,12 @@ function Stil() {
 .tkv-simdi::before{content:"";position:absolute;left:-3px;top:-3px;width:8px;height:8px;
   border-radius:50%;background:#D9534F;}
 
-.tkv-blok.kisa{flex-direction:row;align-items:center;gap:4px;padding:0 5px;}
-.tkv-blok.kisa .tkv-blok-s{font-size:7.5px;flex-shrink:0;}
-.tkv-blok.kisa .tkv-blok-k{font-size:9px;white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis;min-width:0;}
+.tkv-blok.kisa{flex-direction:row;align-items:center;gap:5px;padding:0 6px;}
+.tkv-blok.tasan{z-index:4;box-shadow:0 1px 4px rgba(18,48,58,.14);}
+.tkv-blok.tasan:hover{z-index:9;}
+.tkv-blok.kisa .tkv-blok-s{font-size:8.5px;flex-shrink:0;}
+.tkv-blok.kisa .tkv-blok-k{font-size:10px;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;min-width:0;line-height:1.1;}
 .tkv-blok.kisa .ct-rozet{display:none;}
 .tkv-blok{position:absolute;z-index:3;border-radius:6px;overflow:hidden;
   background:color-mix(in srgb, var(--c) 30%, #fff);
@@ -4200,6 +4199,12 @@ function Stil() {
 .tkv-blok:hover .tkv-yan::after{opacity:1;}
 .tkv-yay-sayi{position:absolute;top:2px;right:4px;font-size:8px;font-weight:900;
   color:#fff;background:var(--c);padding:1px 5px;border-radius:4px;z-index:4;}
+.zum{display:inline-flex;gap:3px;margin-left:4px;}
+.zum-b{width:28px;height:30px;border-radius:8px;background:var(--yzy2);border:none;
+  color:var(--tur);font-size:15px;font-weight:900;cursor:pointer;font-family:inherit;
+  line-height:1;}
+.zum-b:hover:not(:disabled){background:var(--tur-a);}
+.zum-b:disabled{opacity:.3;cursor:not-allowed;}
 .tkv-sutun.pano{cursor:copy;background-color:rgba(6,120,140,.05);}
 .tk-sag{display:flex;align-items:center;gap:6px;}
 .geri-b{width:36px;height:36px;border-radius:10px;background:var(--yzy2);
