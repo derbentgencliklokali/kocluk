@@ -1644,6 +1644,46 @@ function Ozet({ o, set, salt, videoAc, rol }) {
     const seri = useMemo(() => seriHesapla(o.kayitlar), [o.kayitlar]);
     const hedef = Number(o.haftalikHedef) || 1;
     const oran = ist.hafta / hedef;
+    const saatSimdi = new Date().getHours();
+    const selam = saatSimdi < 11 ? "Günaydın" : saatSimdi < 18 ? "Merhaba" : "İyi akşamlar";
+    const ilkAd = (o.ad || "").split(" ")[0];
+    const kalan = o.sinavTarihi ? gunFarki(o.sinavTarihi) : null;
+    const kalanGun = kalan === null ? null : -kalan;
+    /* Geçen haftayla karşılaştırma */
+    const gecenHafta = useMemo(() => {
+        const bu = haftaBasi();
+        const onc = tarihEkle(bu, -7);
+        const topla = (b, s2) => o.kayitlar
+            .filter((x) => x.tarih >= b && x.tarih < s2)
+            .reduce((a, x) => a + Number(x.soru), 0);
+        return topla(onc, bu);
+    }, [o.kayitlar]);
+    const fark = gecenHafta ? Math.round(((ist.hafta - gecenHafta) / gecenHafta) * 100) : null;
+    /* Kilometre taşları */
+    const tumKonu = dersleriGetir(o).reduce((a, d) => { var _a; return a + (((_a = o.konular[d.id]) === null || _a === void 0 ? void 0 : _a.length) || 0); }, 0);
+    const bitenKonu = dersleriGetir(o).reduce((a, d) => { var _a; return a + (((_a = o.konular[d.id]) === null || _a === void 0 ? void 0 : _a.filter((k) => k.asama >= 1).length) || 0); }, 0);
+    const bitenKitap = o.kitaplar.filter((k) => k.bitirme).length;
+    const tasLar = useMemo(() => {
+        const yap = (ad, deger, esikler, birim) => esikler.map((e) => ({
+            ad, esik: e, deger, birim, kazanildi: deger >= e,
+            yazi: `${e.toLocaleString("tr-TR")} ${birim}`,
+        }));
+        return [
+            ...yap("soru", ist.toplam, [250, 500, 1000, 2500, 5000, 10000], "soru"),
+            ...yap("seri", seri.enUzun, [7, 14, 30, 60], "gün seri"),
+            ...yap("kitap", bitenKitap, [1, 3, 5, 10], "kitap"),
+            ...yap("deneme", o.denemeler.length, [3, 10, 25], "deneme"),
+        ];
+    }, [ist.toplam, seri.enUzun, bitenKitap, o.denemeler.length]);
+    const kazanilan = tasLar.filter((t) => t.kazanildi);
+    const sirada = tasLar.filter((t) => !t.kazanildi)
+        .sort((a, b) => (a.esik - a.deger) - (b.esik - b.deger))[0];
+    const motivasyon = seri.simdi === 0
+        ? "Bugün bir soru çözerek yeniden başla."
+        : oran >= 1 ? "Haftalık hedefini tamamladın. Fazlası cepte."
+            : oran >= 0.6 ? "İyi gidiyorsun, hedefe az kaldı."
+                : seri.simdi >= 7 ? `${seri.simdi} gündür hiç ara vermedin.`
+                    : "Küçük adımlar birikiyor, devam.";
     const et = etiketler(o);
     const kitap = sonKitapBul(o);
     const bugunGorev = gunGorevleri(o, bugun());
@@ -1666,26 +1706,80 @@ function Ozet({ o, set, salt, videoAc, rol }) {
                     React.createElement("div", { className: "hedef-d buyuk" }, olcutYaz(o, d.dilim)))))) : (React.createElement(Bos, { baslik: "Hen\u00FCz deneme yok", metin: "Deneme sekmesinden ekleyebilirsin." }))));
     };
     return (React.createElement(React.Fragment, null,
-        React.createElement("section", { className: "kart merkez" },
-            React.createElement("div", { className: "etiket" }, "BU HAFTA"),
-            React.createElement("div", { className: "halka-sar" },
-                React.createElement(Halka, { oran: oran }),
-                React.createElement("div", { className: "halka-ic" },
-                    React.createElement("div", { className: "halka-sayi" }, ist.hafta),
-                    React.createElement("div", { className: "halka-alt" },
-                        "/ ",
+        React.createElement("section", { className: "hero" },
+            o.hedefGorsel && React.createElement("img", { className: "hero-foto", src: o.hedefGorsel, alt: "" }),
+            React.createElement("div", { className: "hero-ic" },
+                React.createElement("div", { className: "hero-selam" },
+                    selam,
+                    ilkAd ? `, ${ilkAd}` : ""),
+                kalanGun !== null && kalanGun >= 0 ? (React.createElement("div", { className: "hero-sayim" },
+                    React.createElement("span", { className: "hero-rakam" }, kalanGun),
+                    React.createElement("span", { className: "hero-birim" },
+                        "g\u00FCn sonra ",
+                        o.seviye === "yks" ? "YKS" : "LGS"))) : (React.createElement("div", { className: "hero-sayim" },
+                    React.createElement("span", { className: "hero-rakam" }, ist.hafta),
+                    React.createElement("span", { className: "hero-birim" }, "soru \u00B7 bu hafta"))),
+                React.createElement("div", { className: "hero-hedef" },
+                    React.createElement("b", null, o.hedefLise),
+                    o.hedefDilim !== "" && o.hedefDilim !== undefined && (React.createElement("span", null,
+                        et.olcut.toLocaleLowerCase("tr"),
+                        " ",
+                        olcutYaz(o, o.hedefDilim)))),
+                React.createElement("div", { className: "hero-yol" },
+                    React.createElement("div", { className: "hero-dolu", style: { width: `${Math.min(oran, 1) * 100}%` } })),
+                React.createElement("div", { className: "hero-alt" },
+                    React.createElement("span", null,
+                        React.createElement("b", null, ist.hafta),
+                        " / ",
                         hedef,
-                        " soru"))),
-            React.createElement("div", { className: "oran-yazi" },
-                "Haftal\u0131k hedefin ",
-                React.createElement("b", null,
-                    "%",
-                    Math.round(oran * 100)),
-                " tamamland\u0131")),
+                        " bu hafta"),
+                    React.createElement("span", null,
+                        React.createElement("b", null, seri.simdi),
+                        " g\u00FCn seri"),
+                    React.createElement("span", null,
+                        React.createElement("b", null, ist.toplam.toLocaleString("tr-TR")),
+                        " toplam soru")),
+                React.createElement("div", { className: "hero-motive" }, motivasyon))),
         React.createElement("div", { className: "dortlu" }, [["Bugün", ist.bugun], ["Bu hafta", ist.hafta],
-            ["Bu ay", ist.ay], ["Toplam", ist.toplam]].map(([a, s]) => (React.createElement("div", { key: a, className: "mini" },
-            React.createElement("div", { className: "mini-s" }, s),
+            ["Bu ay", ist.ay], ["Toplam", ist.toplam]].map(([a, v]) => (React.createElement("div", { key: a, className: "mini" },
+            React.createElement("div", { className: "mini-s" }, v.toLocaleString("tr-TR")),
             React.createElement("div", { className: "mini-a" }, a))))),
+        fark !== null && (React.createElement("div", { className: fark >= 0 ? "kiyas artis" : "kiyas dusus" },
+            fark >= 0 ? "▲" : "▼",
+            " Ge\u00E7en haftaya g\u00F6re ",
+            Math.abs(fark),
+            "%",
+            " ",
+            fark >= 0 ? "daha fazla" : "daha az",
+            " soru \u00B7 ge\u00E7en hafta ",
+            gecenHafta)),
+        React.createElement("section", { className: "kart" },
+            React.createElement("div", { className: "kart-ust" },
+                React.createElement("div", { className: "etiket" }, "K\u0130LOMETRE TA\u015ELARI"),
+                React.createElement("div", { className: "sayac" },
+                    kazanilan.length,
+                    " / ",
+                    tasLar.length)),
+            kazanilan.length > 0 && (React.createElement("div", { className: "rozetler" }, kazanilan.slice(-8).map((t) => (React.createElement("span", { className: `rozet-t ${t.ad}`, key: t.ad + t.esik }, t.yazi))))),
+            sirada ? (React.createElement("div", { className: "sirada" },
+                React.createElement("div", { className: "sirada-ust" },
+                    React.createElement("span", null,
+                        "S\u0131radaki: ",
+                        React.createElement("b", null, sirada.yazi)),
+                    React.createElement("span", { className: "sirada-k" },
+                        (sirada.esik - sirada.deger).toLocaleString("tr-TR"),
+                        " kald\u0131")),
+                React.createElement("div", { className: "sirada-yol" },
+                    React.createElement("div", { className: "sirada-dolu", style: { width: `${Math.min(sirada.deger / sirada.esik, 1) * 100}%` } })))) : (React.createElement("div", { className: "sirada-bitti" }, "B\u00FCt\u00FCn kilometre ta\u015Flar\u0131n\u0131 ge\u00E7tin.")),
+            tumKonu > 0 && (React.createElement("div", { className: "konu-ilerleme" },
+                React.createElement("div", { className: "sirada-ust" },
+                    React.createElement("span", null, "Konu ilerlemesi"),
+                    React.createElement("span", { className: "sirada-k" },
+                        bitenKonu,
+                        " / ",
+                        tumKonu)),
+                React.createElement("div", { className: "sirada-yol" },
+                    React.createElement("div", { className: "sirada-dolu konu", style: { width: `${(bitenKonu / tumKonu) * 100}%` } }))))),
         React.createElement("section", { className: `kart seri-kart s${seriSeviye(seri.simdi)}` },
             React.createElement("div", { className: "seri-sol" },
                 React.createElement("div", { className: "seri-sayi" }, seri.simdi),
@@ -1751,7 +1845,8 @@ function Ozet({ o, set, salt, videoAc, rol }) {
                                 o.hedefGorsel && (React.createElement("button", { className: "ufak tehlike", onClick: () => set({ hedefGorsel: "" }) }, "Kald\u0131r")))),
                         gorselHata && React.createElement("div", { className: "hata" }, gorselHata)),
                     React.createElement(Alan, { etiket: et.olcut, type: "number", step: o.seviye === "yks" ? "1" : "0.01", value: o.hedefDilim, onChange: (e) => set({ hedefDilim: e.target.value }) }),
-                    React.createElement(Alan, { etiket: "Haftal\u0131k soru hedefi", type: "number", value: o.haftalikHedef, onChange: (e) => set({ haftalikHedef: e.target.value }) })))) : (React.createElement(HedefKart, { o: o }))),
+                    React.createElement(Alan, { etiket: "Haftal\u0131k soru hedefi", type: "number", value: o.haftalikHedef, onChange: (e) => set({ haftalikHedef: e.target.value }) }),
+                    React.createElement(Alan, { etiket: "S\u0131nav tarihi", type: "date", value: o.sinavTarihi || "", onChange: (e) => set({ sinavTarihi: e.target.value }) })))) : (React.createElement(HedefKart, { o: o }))),
         o.seviye === "yks"
             ? [denemeKarti("tyt", "SON TYT DENEMESİ"), denemeKarti("ayt", "SON AYT DENEMESİ")]
             : denemeKarti(undefined, "SON DENEME"),
@@ -3836,6 +3931,60 @@ function Stil() {
 .oran-yazi{font-size:13px;font-weight:600;color:var(--sol);}
 .oran-yazi b{color:var(--tur);font-weight:800;}
 
+/* ana ekran kahraman kartı */
+.hero{position:relative;overflow:hidden;border-radius:22px;padding:0;
+  background:linear-gradient(152deg,#0C8AA0 0%,#076076 46%,#0B2E38 100%);
+  box-shadow:0 10px 30px rgba(10,58,71,.22);}
+.hero-foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  opacity:.3;filter:saturate(.85);}
+.hero::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(170deg,rgba(8,70,85,.5) 0%,rgba(9,34,42,.9) 78%);}
+.hero-ic{position:relative;z-index:2;padding:22px 22px 20px;color:#fff;}
+.hero-selam{font-size:13px;font-weight:600;color:rgba(255,255,255,.72);
+  letter-spacing:.1px;}
+.hero-sayim{display:flex;align-items:baseline;gap:10px;margin-top:8px;}
+.hero-rakam{font-size:68px;font-weight:900;letter-spacing:-4px;line-height:.92;
+  font-variant-numeric:tabular-nums;
+  text-shadow:0 2px 18px rgba(0,0,0,.25);}
+.hero-birim{font-size:14px;font-weight:700;color:rgba(255,255,255,.8);
+  letter-spacing:-.1px;}
+.hero-hedef{margin-top:14px;display:flex;flex-direction:column;gap:2px;}
+.hero-hedef b{font-size:16px;font-weight:800;letter-spacing:-.3px;}
+.hero-hedef span{font-size:11.5px;font-weight:600;color:rgba(255,255,255,.65);}
+.hero-yol{height:6px;border-radius:99px;background:rgba(255,255,255,.18);
+  overflow:hidden;margin-top:16px;}
+.hero-dolu{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.4,0,.2,1);
+  background:linear-gradient(90deg,#5FE3C4,#9BF0A8);}
+.hero-alt{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:11px;
+  font-size:11.5px;font-weight:600;color:rgba(255,255,255,.7);}
+.hero-alt b{color:#fff;font-weight:900;font-size:13px;}
+.hero-motive{margin-top:14px;padding-top:12px;font-size:12.5px;font-weight:600;
+  color:rgba(255,255,255,.82);border-top:1px solid rgba(255,255,255,.16);}
+
+.kiyas{padding:10px 14px;border-radius:12px;font-size:12px;font-weight:700;}
+.kiyas.artis{background:#E6F5EF;color:#0F7355;}
+.kiyas.dusus{background:#FBEFEE;color:#A93A2D;}
+
+/* kilometre taşları */
+.rozetler{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.rozet-t{font-size:10.5px;font-weight:800;padding:6px 11px;border-radius:99px;
+  background:var(--tur-a);color:var(--tur);}
+.rozet-t.seri{background:#FFF1DE;color:#B0661A;}
+.rozet-t.kitap{background:#F1EAFA;color:#6B45A0;}
+.rozet-t.deneme{background:#E8F3E4;color:#3E6531;}
+.sirada,.konu-ilerleme{margin-top:4px;}
+.konu-ilerleme{margin-top:14px;padding-top:14px;border-top:1px solid var(--cizgi);}
+.sirada-ust{display:flex;justify-content:space-between;align-items:baseline;
+  gap:10px;font-size:12.5px;font-weight:600;color:var(--sol);}
+.sirada-ust b{color:var(--met);font-weight:800;}
+.sirada-k{font-size:11px;font-weight:700;white-space:nowrap;}
+.sirada-yol{height:8px;border-radius:99px;background:var(--yzy2);
+  overflow:hidden;margin-top:7px;}
+.sirada-dolu{height:100%;border-radius:99px;transition:width .5s;
+  background:linear-gradient(90deg,var(--tur),var(--tur-p));}
+.sirada-dolu.konu{background:linear-gradient(90deg,#6B45A0,#9B6FD0);}
+.sirada-bitti{font-size:12.5px;font-weight:700;color:var(--yes);}
+
 /* mini istatistik */
 .dortlu{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
 .dortlu.ikili{grid-template-columns:repeat(2,1fr);}
@@ -4673,6 +4822,12 @@ function Stil() {
 
   .hk{height:184px;}
   .hk-ad{font-size:19px;}
+  .hero-ic{padding:30px 32px 26px;}
+  .hero-rakam{font-size:96px;letter-spacing:-6px;}
+  .hero-birim{font-size:16px;}
+  .hero-hedef b{font-size:19px;}
+  .hero-alt{gap:6px 26px;font-size:12.5px;}
+  .hero-motive{font-size:13.5px;}
 
   .ikili-g,.uclu{gap:12px;}
   .oneri,.tavsiye,.bos-yorum,.grs-m{max-width:900px;}
