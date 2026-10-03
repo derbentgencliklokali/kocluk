@@ -2066,13 +2066,14 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
             return;
         const hb = hafta[0];
         const gunler = gorevler
-            .filter((g) => hafta.includes(g.tarih) && g.tip === "calisma")
+            .filter((g) => hafta.includes(g.tarih) && g.tip !== "tekrar")
             .map((g) => ({
             ofset: Math.round((new Date(g.tarih) - new Date(hb)) / 86400000),
             saat: g.saat, sure: g.sure, ders: g.ders, konu: g.konu,
+            tip: g.tip, calismaTuru: g.calismaTuru, kategori: g.kategori,
         }));
         if (!gunler.length) {
-            setMesaj("Bu haftada kaydedilecek çalışma görevi yok.");
+            setMesaj("Bu haftada kaydedilecek görev yok.");
             return;
         }
         setSablonlar([...sablonlar, {
@@ -2080,29 +2081,44 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
             }]);
         setMesaj(`"${ad}" şablonu kaydedildi (${gunler.length} görev).`);
     };
-    const sablonUygula = (s, tekrarli) => {
+    const sablonUygula = (sb, tekrarli) => {
         const hb = hafta[0];
+        const dersVar = new Set(dl.map((d) => d.id));
         const yeni = [];
-        s.gunler.forEach((x, i) => {
+        let atlanan = 0;
+        sb.gunler.forEach((x, i) => {
+            if (x.ders && !dersVar.has(x.ders)) {
+                atlanan++;
+                return;
+            }
             const kok = {
                 id: `g${Date.now()}-${i}`, tarih: tarihEkle(hb, x.ofset),
                 saat: x.saat || "", sure: x.sure || 45, ders: x.ders, konu: x.konu,
-                tip: "calisma", kademe: null, tamam: false,
+                tip: x.tip || "calisma", calismaTuru: x.calismaTuru || "karma",
+                kategori: x.kategori, kademe: null, tamam: false,
             };
             yeni.push(kok);
-            if (tekrarli)
+            if (tekrarli && kok.tip === "calisma")
                 yeni.push(...tekrarUret(kok));
         });
+        if (!yeni.length) {
+            setMesaj("Bu şablondaki dersler bu öğrencide yok, hiçbir görev eklenmedi.");
+            return;
+        }
         yaz([...gorevler, ...yeni]);
         setSablonAcik(false);
-        setMesaj(`"${s.ad}" uygulandı · ${s.gunler.length} görev eklendi.`);
+        setMesaj(atlanan
+            ? `"${sb.ad}" uygulandı · ${yeni.filter((g) => g.tip !== "tekrar").length} görev eklendi, ${atlanan} görev atlandı (ders bu öğrencide yok).`
+            : `"${sb.ad}" uygulandı · ${sb.gunler.length} görev eklendi.`);
     };
     const sablonSil = (id) => {
         if (!window.confirm("Bu şablon silinsin mi?"))
             return;
         setSablonlar(sablonlar.filter((x) => x.id !== id));
     };
-    const uygunSablonlar = sablonlar.filter((s) => s.seviye === o.seviye && (o.seviye !== "yks" || s.alan === o.alan));
+    /* Aynı sınav türündeki tüm şablonlar; farklı alandan olanlar da
+       gösterilir, uygularken bu öğrencide olmayan dersler atlanır. */
+    const uygunSablonlar = sablonlar.filter((x) => x.seviye === o.seviye);
     /* --- görev çipi --- */
     const Cip = ({ g }) => {
         const d = dl.find((x) => x.id === g.ders);
@@ -2193,12 +2209,13 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                         s.gunler.length,
                         " g\u00F6rev \u00B7 ",
                         s.seviye === "yks"
-                            ? `YKS ${(ALANLAR[s.alan] || ALANLAR.say).kisa}` : "LGS")),
+                            ? `YKS ${(ALANLAR[s.alan] || ALANLAR.say).kisa}` : "LGS",
+                        s.seviye === "yks" && s.alan !== o.alan && " · farklı alan")),
                 React.createElement("div", { className: "sbl-d" },
                     React.createElement("button", { className: "ufak", onClick: () => sablonUygula(s, true) }, "Uygula"),
                     React.createElement("button", { className: "ufak", onClick: () => sablonUygula(s, false) }, "Tekrars\u0131z"),
                     React.createElement("button", { className: "ufak tehlike", onClick: () => sablonSil(s.id) }, "Sil")))))),
-            React.createElement("div", { className: "ipuc" }, "\u015Eablon, g\u00F6r\u00FCnt\u00FClenen haftan\u0131n pazartesisinden ba\u015Flayarak uygulan\u0131r."))),
+            React.createElement("div", { className: "ipuc" }, "\u015Eablon, takvimde g\u00F6r\u00FCnen ilk g\u00FCnden ba\u015Flayarak uygulan\u0131r. Ba\u015Fka bir g\u00FCne ba\u015Flatmak i\u00E7in \u00F6nce oklarla o g\u00FCne gidin."))),
         ekleAcik && !salt && (React.createElement("div", { className: "gd-perde", onClick: () => setEkleAcik(false) },
             React.createElement("div", { className: "gd", onClick: (e) => e.stopPropagation() },
                 React.createElement("div", { className: "gd-ust" },
