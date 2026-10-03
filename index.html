@@ -75,9 +75,18 @@ const DERSLER_TYT = [
     { id: "t-biyoloji", ad: "BİYOLOJİ", kisa: "BİY", denemeSoru: 6 },
 ];
 /* Denemede ayrı sorulmaz ama çalışma takibinde ayrı tutulur */
-const DERSLER_CALISMA = [
-    { id: "geometri", ad: "GEOMETRİ", kisa: "GEO", denemeSoru: 0, sadeceCalisma: true },
+const GEO_TYT = { id: "geometri", ad: "GEOMETRİ (TYT)", kisa: "GEO",
+    denemeSoru: 0, sadeceCalisma: true };
+const GEO_AYT = { id: "a-geometri", ad: "GEOMETRİ (AYT)", kisa: "GEO·A",
+    denemeSoru: 0, sadeceCalisma: true };
+/* Eşit Ağırlık öğrencisi AYT'de bu testleri çözmez ama konu takibi isteyebilir */
+const EK_SOSYAL = [
+    { id: "a-tarih2", ad: "TARİH-2", kisa: "TAR2", denemeSoru: 0, sadeceCalisma: true },
+    { id: "a-cog2", ad: "COĞRAFYA-2", kisa: "COĞ2", denemeSoru: 0, sadeceCalisma: true },
 ];
+const DERSLER_CALISMA = [GEO_TYT, GEO_AYT];
+/* TYT bölümünün uzunluğu — çip şeridindeki AYT ayracı için */
+const tytUzunluk = () => DERSLER_TYT.length + 1;
 const AYT_TUM = {
     "a-mat": { ad: "MATEMATİK", kisa: "MAT", denemeSoru: 40 },
     "a-fizik": { ad: "FİZİK", kisa: "FİZ", denemeSoru: 14 },
@@ -106,7 +115,10 @@ const aytDersleri = (alan) => (ALANLAR[alan] || ALANLAR.say).ayt.map((id) => (Ob
 const dersleriGetir = (o) => {
     if (!o || o.seviye !== "yks")
         return DERSLER_LGS;
-    return [...DERSLER_TYT, ...DERSLER_CALISMA, ...aytDersleri(o.alan)];
+    const ayt = aytDersleri(o.alan);
+    const ek = o.alan === "ea"
+        ? EK_SOSYAL.filter((x) => !ayt.some((a) => a.id === x.id)) : [];
+    return [...DERSLER_TYT, GEO_TYT, ...ayt, ...ek, GEO_AYT];
 };
 /* Belirli bir deneme türünün dersleri */
 const denemeDersleri = (o, tur) => {
@@ -263,7 +275,6 @@ const KONULAR_YKS = {
     "geometri": [
         "Doğruda ve Üçgende Açılar",
         "Dik ve Özel Üçgenler",
-        "Dik Üçgende Trigonometrik Bağıntılar",
         "İkizkenar ve Eşkenar Üçgen",
         "Üçgende Alanlar",
         "Üçgende Açıortay Bağıntıları",
@@ -272,10 +283,10 @@ const KONULAR_YKS = {
         "Üçgende Açı-Kenar Bağıntıları",
         "Çokgenler",
         "Dörtgenler",
-        "Yamuk",
         "Paralelkenar",
         "Eşkenar Dörtgen - Deltoid",
         "Dikdörtgen",
+        "Yamuk",
         "Çemberde Açılar",
         "Çemberde Uzunluk",
         "Daire",
@@ -283,11 +294,7 @@ const KONULAR_YKS = {
         "Piramitler",
         "Küre",
         "Koordinat Düzlemi ve Noktanın Analitiği",
-        "Doğrunun Analitiği",
-        "Tekrar Eden, Dönen ve Yansıyan Şekiller",
-        "Dönüşümlerle Geometri",
-        "Trigonometri",
-        "Çemberin Analitiği"
+        "Tekrar Eden, Dönen ve Yansıyan Şekiller"
     ],
     "t-fizik": [
         "Fiziğin Tanımı ve Özellikleri",
@@ -693,6 +700,23 @@ const KONULAR_YKS = {
         "Anlamca Yakın Cümle",
         "Anlatım Akışı",
         "Anlatım Akışını Bozan Cümle"
+    ],
+    "a-geometri": [
+        "Trigonometrik Bağıntılar",
+        "Üçgende Trigonometrik Alan",
+        "Sinüs ve Kosinüs Teoremi",
+        "Doğrunun Analitiği",
+        "İki Doğru Arasındaki Açı",
+        "Nokta-Doğru Uzaklığı",
+        "Çemberin Analitiği",
+        "Çember-Doğru İlişkisi",
+        "Dönüşümlerle Geometri",
+        "Öteleme, Yansıma ve Dönme",
+        "Katı Cisimlerde Hacim ve Alan",
+        "Dik Dairesel Silindir",
+        "Dik Dairesel Koni",
+        "Küre ve Küre Parçaları",
+        "Çokyüzlüler"
     ]
 };
 const konuKaynak = (o) => (o.seviye === "yks" ? KONULAR_YKS : KONULAR_LGS);
@@ -2299,11 +2323,11 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                         React.createElement("div", { className: "gd-sure" }, [["genel", "Genel"], ["bras", "Branş"]].map(([id, ad]) => (React.createElement("button", { key: id, onClick: () => setF(Object.assign(Object.assign({}, f), { dnmTur: id })), className: f.dnmTur === id ? "gd-s etkin" : "gd-s" }, ad)))),
                         f.dnmTur === "bras" && (React.createElement(React.Fragment, null,
                             React.createElement("div", { className: "gd-e" }, "DERS"),
-                            React.createElement(DersCipleri, { dersler: dl, secili: f.ders, sec: (id) => setF(Object.assign(Object.assign({}, f), { ders: id })), ayirici: o.seviye === "yks" ? DERSLER_TYT.length + DERSLER_CALISMA.length : 0 }))),
+                            React.createElement(DersCipleri, { dersler: dl, secili: f.ders, sec: (id) => setF(Object.assign(Object.assign({}, f), { ders: id })), ayirici: o.seviye === "yks" ? tytUzunluk() : 0 }))),
                         React.createElement("div", { className: "gd-e" }, "DENEME ADI"),
                         React.createElement("input", { className: "gd-ara", value: f.dnmAd, placeholder: f.dnmTur === "bras" ? "Örn. Paragraf Denemesi 3" : "Örn. 3D TYT Deneme 4", onChange: (e) => setF(Object.assign(Object.assign({}, f), { dnmAd: e.target.value })) }))) : (React.createElement(React.Fragment, null,
                         React.createElement("div", { className: "gd-e" }, "DERS"),
-                        React.createElement(DersCipleri, { dersler: dl, secili: f.ders, sec: (id) => setF(Object.assign(Object.assign({}, f), { ders: id, konu: "" })), ayirici: o.seviye === "yks" ? DERSLER_TYT.length + DERSLER_CALISMA.length : 0 }),
+                        React.createElement(DersCipleri, { dersler: dl, secili: f.ders, sec: (id) => setF(Object.assign(Object.assign({}, f), { ders: id, konu: "" })), ayirici: o.seviye === "yks" ? tytUzunluk() : 0 }),
                         React.createElement("div", { className: "gd-e" }, "\u00C7ALI\u015EMA T\u00DCR\u00DC"),
                         React.createElement("div", { className: "gd-sure" }, CALISMA_TURU.map((c) => (React.createElement("button", { key: c.id, onClick: () => setF(Object.assign(Object.assign({}, f), { calismaTuru: c.id })), className: f.calismaTuru === c.id ? "gd-s etkin" : "gd-s" }, c.ad)))),
                         React.createElement("div", { className: "gd-e" }, "KONU / G\u00D6REV ADI"),
@@ -2836,7 +2860,7 @@ function Soru({ o, set, salt }) {
         return k ? k.ad : "";
     };
     const k = katsayi(o);
-    const ayirici = o.seviye === "yks" ? DERSLER_TYT.length + DERSLER_CALISMA.length : 0;
+    const ayirici = o.seviye === "yks" ? tytUzunluk() : 0;
     /* Seçili dersin konuları, yazdıkça daralır */
     const eslesen = useMemo(() => {
         const hepsi = o.konular[ders] || [];
@@ -3054,7 +3078,7 @@ function Konu({ o, set, salt, videoAc }) {
     const [yeni, setYeni] = useState("");
     const [acikKonu, setAcikKonu] = useState(null);
     const liste = o.konular[ders] || [];
-    const ayirici = o.seviye === "yks" ? DERSLER_TYT.length + DERSLER_CALISMA.length : 0;
+    const ayirici = o.seviye === "yks" ? tytUzunluk() : 0;
     const aktifDers = dl.find((x) => x.id === ders);
     const konuYaz = (id, deg) => set({
         konular: Object.assign(Object.assign({}, o.konular), { [ders]: liste.map((k) => (k.id === id ? Object.assign(Object.assign({}, k), deg) : k)) }),
