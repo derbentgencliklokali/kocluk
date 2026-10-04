@@ -1172,7 +1172,7 @@ function HedefKart({ o }) {
                 React.createElement("span", { className: "hk-r-a" }, o.seviye === "yks" ? "hedef sıra" : "hedef dilim")))));
 }
 /* Seçilen fotoğrafı küçültüp veri olarak döndürür (bağlantıya gerek kalmaz) */
-const gorselKucult = (dosya, enBoy = 440) => new Promise((coz, hata) => {
+const gorselKucult = (dosya, enBoy = 300) => new Promise((coz, hata) => {
     const okuyucu = new FileReader();
     okuyucu.onerror = () => hata(new Error("Dosya okunamadı."));
     okuyucu.onload = () => {
@@ -1185,7 +1185,7 @@ const gorselKucult = (dosya, enBoy = 440) => new Promise((coz, hata) => {
             tuval.width = g;
             tuval.height = y;
             tuval.getContext("2d").drawImage(img, 0, 0, g, y);
-            coz(tuval.toDataURL("image/jpeg", 0.7));
+            coz(tuval.toDataURL("image/jpeg", 0.6));
         };
         img.src = okuyucu.result;
     };
@@ -1302,76 +1302,424 @@ function DersCipleri({ dersler, secili, sec, ayirici }) {
         React.createElement("button", { onClick: () => sec(x.id), className: secili === x.id ? "cip etkin" : "cip" }, x.kisa))))));
 }
 /* ================================================================== */
+/*  SUNUCU BAĞLANTISI                                                  */
+/* ================================================================== */
+const API = "https://script.google.com/macros/s/AKfycbx1xpOYoLwX3vHZz9m2qRr3t6BgHB5R_ntIraXoc5PFRk_b46OxWfZDLnlP0jMTYInbEg/exec";
+const OTURUM_KEY = "derbent-oturum";
+const apiGet = async (kimlik, islem) => {
+    const q = new URLSearchParams(Object.assign({ islem }, kimlik));
+    const y = await fetch(`${API}?${q.toString()}`);
+    if (!y.ok)
+        throw new Error("Sunucuya ulaşılamadı (" + y.status + ")");
+    return y.json();
+};
+const apiPost = async (kimlik, govde) => {
+    const y = await fetch(API, {
+        method: "POST",
+        /* text/plain, tarayıcının ön uçuş isteğini (CORS preflight) engeller */
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(Object.assign(Object.assign({}, kimlik), govde)),
+    });
+    if (!y.ok)
+        throw new Error("Sunucuya yazılamadı (" + y.status + ")");
+    return y.json();
+};
+/* --- sunucu satırları → uygulama nesnesi --- */
+const bosOgrenci = (o) => ({
+    id: o.id, kod: o.kod, veliKod: o.veliKod, ad: o.ad, sinif: o.sinif,
+    seviye: o.seviye || "lgs", alan: o.alan || "say",
+    hedefLise: o.hedefLise || "", hedefDilim: o.hedefDilim === undefined ? "" : o.hedefDilim,
+    haftalikHedef: Number(o.haftalikHedef) || 300,
+    sinavTarihi: o.sinavTarihi || "", hedefGorsel: o.hedefGorsel || "",
+    gorevler: [], kayitlar: [], denemeler: [], konular: {},
+    kitaplar: [], mesajlar: [], gorusmeler: [], kaynaklar: [],
+});
+const paketiCoz = (paket) => {
+    const liste = (paket.Ogrenciler || []).map(bosOgrenci);
+    const harita = {};
+    liste.forEach((o) => (harita[o.id] = o));
+    (paket.Gorevler || []).forEach((r) => {
+        const o = harita[r.ogrenciId];
+        if (!o)
+            return;
+        o.gorevler.push({
+            id: r.id, tarih: r.tarih, saat: r.saat || "", sure: Number(r.sure) || 45,
+            ders: r.ders, konu: r.konu, tip: r.tip || "calisma",
+            calismaTuru: r.calismaTuru || "karma", kategori: r.kategori || undefined,
+            kademe: r.kademe === "" ? null : Number(r.kademe),
+            kokId: r.kokId || undefined, tamam: !!r.tamam,
+        });
+    });
+    (paket.Kayitlar || []).forEach((r) => {
+        const o = harita[r.ogrenciId];
+        if (!o)
+            return;
+        o.kayitlar.push({
+            id: r.id, tarih: r.tarih, ders: r.ders, konu: r.konu,
+            soru: Number(r.soru) || 0, dogru: Number(r.dogru) || 0,
+            yanlis: Number(r.yanlis) || 0, bos: Number(r.bos) || 0,
+            kaynak: r.kaynak || "",
+        });
+    });
+    (paket.Denemeler || []).forEach((r) => {
+        const o = harita[r.ogrenciId];
+        if (!o)
+            return;
+        const d = {
+            id: r.id, tarih: r.tarih, ad: r.ad, tur: r.tur || undefined,
+            dilim: r.dilim === undefined ? "" : String(r.dilim),
+            yanlisKonular: r.yanlisKonular || {},
+        };
+        Object.entries(r.dersler || {}).forEach(([k, v]) => (d[k] = v));
+        o.denemeler.push(d);
+    });
+    (paket.Konular || []).forEach((r) => {
+        const o = harita[r.ogrenciId];
+        if (!o)
+            return;
+        if (!o.konular[r.ders])
+            o.konular[r.ders] = [];
+        o.konular[r.ders].push({
+            id: r.id, ad: r.ad, asama: Number(r.asama) || 0,
+            videolar: r.videolar || undefined,
+        });
+    });
+    (paket.Kitaplar || []).forEach((r) => {
+        const o = harita[r.ogrenciId];
+        if (!o)
+            return;
+        o.kitaplar.push({ id: r.id, ad: r.ad, yazar: r.yazar, sayfa: r.sayfa,
+            baslama: r.baslama, bitirme: r.bitirme || "" });
+    });
+    (paket.Mesajlar || []).forEach((r) => {
+        const o = harita[r.ogrenciId];
+        if (!o)
+            return;
+        o.mesajlar.push({ id: r.id, kanal: r.kanal, kimden: r.kimden,
+            metin: r.metin, tarih: r.tarih, okundu: !!r.okundu });
+    });
+    (paket.Gorusmeler || []).forEach((r) => {
+        const o = harita[r.ogrenciId];
+        if (!o)
+            return;
+        o.gorusmeler.push({ id: r.id, tarih: r.tarih, konusulan: r.konusulan,
+            hedef: r.hedef, paylas: !!r.paylas });
+    });
+    (paket.Kaynaklar || []).forEach((r) => {
+        const o = harita[r.ogrenciId];
+        if (!o)
+            return;
+        o.kaynaklar.push({ id: r.id, ad: r.ad, grup: r.grup });
+    });
+    /* Eksik ders listelerini müfredattan tamamla */
+    liste.forEach((o) => { o.konular = konulariTamamla(o); });
+    return { ogrenciler: liste, sablonlar: paket.Sablonlar || [] };
+};
+/* --- uygulama nesnesi → sunucu satırları --- */
+const TABLO_ALAN = {
+    gorevler: "Gorevler", kayitlar: "Kayitlar", denemeler: "Denemeler",
+    konular: "Konular", kitaplar: "Kitaplar", mesajlar: "Mesajlar",
+    gorusmeler: "Gorusmeler", kaynaklar: "Kaynaklar",
+};
+const satirYap = (alan, o, k) => {
+    const t = { id: k.id, ogrenciId: o.id };
+    if (alan === "denemeler") {
+        const dersler = {};
+        dersleriGetir(o).forEach((d) => { if (k[d.id])
+            dersler[d.id] = k[d.id]; });
+        return Object.assign(Object.assign({}, t), { tarih: k.tarih, ad: k.ad, tur: k.tur || "", dilim: k.dilim || "", dersler, yanlisKonular: k.yanlisKonular || {} });
+    }
+    return Object.assign(Object.assign({}, t), k);
+};
+/* Konular haritasını düz satırlara çevirir */
+const konuSatirlari = (o) => {
+    const cikti = [];
+    Object.entries(o.konular || {}).forEach(([ders, liste]) => {
+        (liste || []).forEach((k) => cikti.push({
+            id: k.id, ogrenciId: o.id, ders, ad: k.ad,
+            asama: k.asama || 0, videolar: k.videolar || null,
+        }));
+    });
+    return cikti;
+};
+const satirlariUret = (o, alan) => alan === "konular" ? konuSatirlari(o)
+    : (o[alan] || []).map((k) => satirYap(alan, o, k));
+/* İki liste arasındaki farkı bulur */
+const tabloFarki = (eski, yeni) => {
+    const e = {}, y = {};
+    (eski || []).forEach((r) => (e[String(r.id)] = JSON.stringify(r)));
+    (yeni || []).forEach((r) => (y[String(r.id)] = JSON.stringify(r)));
+    return {
+        yazilacak: (yeni || []).filter((r) => e[String(r.id)] !== y[String(r.id)]),
+        silinecek: Object.keys(e).filter((id) => !(id in y)),
+    };
+};
+const OGRENCI_ALANLARI = ["id", "kod", "veliKod", "ad", "sinif", "seviye", "alan",
+    "hedefLise", "hedefDilim", "haftalikHedef", "sinavTarihi", "hedefGorsel"];
+const ogrenciSatiri = (o) => {
+    const r = {};
+    OGRENCI_ALANLARI.forEach((a) => (r[a] = o[a] === undefined ? "" : o[a]));
+    return r;
+};
+/* ================================================================== */
+/*  GİRİŞ EKRANI                                                       */
+/* ================================================================== */
+function GirisEkrani({ girisYap, hata, bekliyor }) {
+    const [kapi, setKapi] = useState("ogrenci");
+    const [deger, setDeger] = useState("");
+    const gonder = () => {
+        if (!deger.trim())
+            return;
+        girisYap(kapi === "koc"
+            ? { sifre: deger.trim() }
+            : { kod: deger.trim().toLocaleUpperCase("tr") });
+    };
+    return (React.createElement("div", { className: "giris" },
+        React.createElement(Stil, null),
+        React.createElement("div", { className: "giris-kutu" },
+            React.createElement(Logo, { boyut: 64 }),
+            React.createElement("div", { className: "giris-b" }, "Ko\u00E7luk Takip"),
+            React.createElement("div", { className: "giris-a" }, "Derbent Gen\u00E7lik Lokali"),
+            React.createElement("div", { className: "giris-kapilar" }, [["ogrenci", "Öğrenci"], ["veli", "Veli"], ["koc", "Koç"]].map(([id, ad]) => (React.createElement("button", { key: id, onClick: () => { setKapi(id); setDeger(""); }, className: kapi === id ? "giris-k etkin" : "giris-k" }, ad)))),
+            React.createElement("label", { className: "alan giris-alan" },
+                React.createElement("span", null, kapi === "koc" ? "KOÇ ŞİFRESİ" : "GİRİŞ KODU"),
+                React.createElement("input", { value: deger, autoCapitalize: kapi === "koc" ? "none" : "characters", type: kapi === "koc" ? "password" : "text", placeholder: kapi === "koc" ? "Şifreniz" : "Örn. GB76UC", onChange: (e) => setDeger(e.target.value), onKeyDown: (e) => e.key === "Enter" && gonder() })),
+            hata && React.createElement("div", { className: "hata" }, hata),
+            React.createElement("button", { className: "birincil", onClick: gonder, disabled: bekliyor || !deger.trim() }, bekliyor ? "Bağlanılıyor…" : "Giriş yap"),
+            React.createElement("div", { className: "giris-not" }, kapi === "koc"
+                ? "Şifrenizi koçluk tablosundaki Koçluk menüsünden görebilirsiniz."
+                : "Kodunuz yoksa eğitim koçunuzdan isteyin."))));
+}
+/* ================================================================== */
 /*  KÖK BİLEŞEN                                                        */
 /* ================================================================== */
 function DerbentLgs() {
-    const [veri, setVeri] = useState(bosDeger);
+    const [oturum, setOturum] = useState(null);
+    const [girisHata, setGirisHata] = useState("");
+    const [bekliyor, setBekliyor] = useState(false);
+    const [veri, setVeri] = useState({ ogrenciler: [], sablonlar: [] });
     const [yukleniyor, setYukleniyor] = useState(true);
-    const [rol, setRol] = useState("yonetici");
+    const [durum, setDurum] = useState(""); /* senkron bilgisi */
     const [seciliId, setSeciliId] = useState(null);
     const [sekme, setSekme] = useState("ozet");
     const [mesajAcik, setMesajAcik] = useState(false);
     const [video, setVideo] = useState(null);
     const videoAc = (ayar) => setVideo(ayar);
+    const sonVeri = useRef(null); /* sunucuyla eşleşen son hâl */
+    const zaman = useRef(null); /* gecikmeli yazma sayacı */
+    const bekleyen = useRef(false);
+    const rol = oturum ? (oturum.rol === "koc" ? "yonetici" : oturum.rol) : null;
+    const salt = rol === "veli";
+    /* --- açılışta kayıtlı oturum --- */
     useEffect(() => {
         (async () => {
-            var _a;
+            let kayitli = null;
             try {
-                const s = await window_storage.get(STORAGE_KEY);
-                if (s && s.value) {
-                    const p = JSON.parse(s.value);
-                    if ((_a = p.ogrenciler) === null || _a === void 0 ? void 0 : _a.length) {
-                        p.ogrenciler = p.ogrenciler.map((o) => {
-                            const t = Object.assign({ seviye: "lgs", alan: "say", mesajlar: [], gorusmeler: [], kaynaklar: [] }, o);
-                            /* Türkçe listelerinin başına Paragraf'ı bir kez ekle */
-                            ["turkce", "t-turkce", "a-tde"].forEach((d) => {
-                                const l = t.konular && t.konular[d];
-                                if (Array.isArray(l) && !l.some((k) => k.ad === "Paragraf")) {
-                                    t.konular = Object.assign(Object.assign({}, t.konular), { [d]: [{ id: `${d}-par`, ad: "Paragraf", asama: 0 }, ...l] });
-                                }
-                            });
-                            return Object.assign(Object.assign({}, t), { konular: konulariTamamla(t), gorevler: Array.isArray(t.gorevler)
-                                    ? t.gorevler : programGoc(t.program) });
-                        });
-                        setVeri(p);
-                    }
-                }
+                const s = await window_storage.get(OTURUM_KEY);
+                if (s && s.value)
+                    kayitli = JSON.parse(s.value);
             }
-            catch (e) { /* ilk açılış */ }
-            setYukleniyor(false);
+            catch (e) { /* yok */ }
+            if (kayitli && (kayitli.kod || kayitli.sifre)) {
+                await baglan(kayitli, true);
+            }
+            else {
+                setYukleniyor(false);
+            }
         })();
     }, []);
-    const kaydet = async (yeni) => {
-        setVeri(yeni);
+    const onbellegeYaz = async (o, v) => {
         try {
-            await window_storage.set(STORAGE_KEY, JSON.stringify(yeni));
+            await window_storage.set(STORAGE_KEY + "-" + (o.kod || "koc"), JSON.stringify(v));
+        }
+        catch (e) { /* hafıza dolu olabilir, sorun değil */ }
+    };
+    const onbellektenOku = async (o) => {
+        try {
+            const s = await window_storage.get(STORAGE_KEY + "-" + (o.kod || "koc"));
+            if (s && s.value)
+                return JSON.parse(s.value);
+        }
+        catch (e) { /* yok */ }
+        return null;
+    };
+    /* --- giriş --- */
+    const baglan = async (kimlik, sessiz) => {
+        setBekliyor(true);
+        setGirisHata("");
+        /* Önbellek varsa hemen göster, ağ arkadan gelsin */
+        const onbellek = await onbellektenOku(kimlik);
+        if (onbellek) {
+            setVeri(onbellek);
+            sonVeri.current = onbellek;
+            setYukleniyor(false);
+        }
+        try {
+            const k = await apiGet(kimlik, "veri");
+            if (k.hata) {
+                if (!onbellek) {
+                    setGirisHata(k.hata);
+                    setOturum(null);
+                    try {
+                        await window_storage.set(OTURUM_KEY, "");
+                    }
+                    catch (e) { }
+                }
+                setBekliyor(false);
+                setYukleniyor(false);
+                return false;
+            }
+            const cozulmus = paketiCoz(k.rol === "koc" ? k : Object.assign(Object.assign({}, k), { Ogrenciler: [k.ogrenci] }));
+            setVeri(cozulmus);
+            sonVeri.current = JSON.parse(JSON.stringify(cozulmus));
+            setOturum(Object.assign(Object.assign({}, kimlik), { rol: k.rol }));
+            if (k.rol !== "koc" && cozulmus.ogrenciler[0]) {
+                setSeciliId(cozulmus.ogrenciler[0].id);
+            }
+            await onbellegeYaz(kimlik, cozulmus);
+            try {
+                await window_storage.set(OTURUM_KEY, JSON.stringify(kimlik));
+            }
+            catch (e) { }
+            setDurum("");
+            setBekliyor(false);
+            setYukleniyor(false);
+            return true;
+        }
+        catch (hata) {
+            if (onbellek) {
+                setOturum(Object.assign(Object.assign({}, kimlik), { rol: kimlik.sifre ? "koc" : "ogrenci" }));
+                setDurum("Çevrimdışı — kayıtlı veriler gösteriliyor");
+            }
+            else if (!sessiz) {
+                setGirisHata("Bağlantı kurulamadı. İnternetinizi kontrol edin.");
+            }
+            setBekliyor(false);
+            setYukleniyor(false);
+            return false;
+        }
+    };
+    const cikis = async () => {
+        try {
+            await window_storage.set(OTURUM_KEY, "");
+        }
+        catch (e) { }
+        setOturum(null);
+        setVeri({ ogrenciler: [], sablonlar: [] });
+        setSeciliId(null);
+        sonVeri.current = null;
+    };
+    /* --- sunucuya yazma --- */
+    const sunucuyaYaz = async (yeniVeri) => {
+        if (!oturum)
+            return;
+        const eski = sonVeri.current || { ogrenciler: [], sablonlar: [] };
+        const islemler = [];
+        yeniVeri.ogrenciler.forEach((o) => {
+            const e = eski.ogrenciler.find((x) => x.id === o.id);
+            if (!e || JSON.stringify(ogrenciSatiri(e)) !== JSON.stringify(ogrenciSatiri(o))) {
+                islemler.push({ islem: "yaz", tablo: "Ogrenciler", kayitlar: [ogrenciSatiri(o)] });
+            }
+            Object.keys(TABLO_ALAN).forEach((alan) => {
+                const f = tabloFarki(e ? satirlariUret(e, alan) : [], satirlariUret(o, alan));
+                if (f.yazilacak.length) {
+                    islemler.push({ islem: "yaz", tablo: TABLO_ALAN[alan], kayitlar: f.yazilacak });
+                }
+                if (f.silinecek.length && rol === "yonetici") {
+                    islemler.push({ islem: "sil", tablo: TABLO_ALAN[alan], idler: f.silinecek });
+                }
+            });
+        });
+        const sf = tabloFarki(eski.sablonlar || [], yeniVeri.sablonlar || []);
+        if (sf.yazilacak.length) {
+            islemler.push({ islem: "yaz", tablo: "Sablonlar", kayitlar: sf.yazilacak });
+        }
+        if (sf.silinecek.length) {
+            islemler.push({ islem: "sil", tablo: "Sablonlar", idler: sf.silinecek });
+        }
+        if (!islemler.length)
+            return;
+        setDurum("Kaydediliyor…");
+        try {
+            for (const is of islemler)
+                await apiPost(oturum, is);
+            sonVeri.current = JSON.parse(JSON.stringify(yeniVeri));
+            setDurum("");
         }
         catch (e) {
-            console.error("Kayıt başarısız", e);
-            window.alert("Veriler kaydedilemedi. Telefon hafızası dolmuş olabilir — " +
-                "eklediğiniz fotoğraflardan birini kaldırmayı deneyin.");
+            setDurum("Kaydedilemedi — bağlantı gelince tekrar denenecek");
+            bekleyen.current = true;
+        }
+    };
+    const kaydet = (yeni) => {
+        setVeri(yeni);
+        if (oturum)
+            onbellegeYaz(oturum, yeni);
+        if (zaman.current)
+            clearTimeout(zaman.current);
+        zaman.current = setTimeout(() => sunucuyaYaz(yeni), 1200);
+    };
+    /* Bağlantı geri geldiğinde bekleyen yazmayı dene */
+    useEffect(() => {
+        const tekrar = () => { if (bekleyen.current) {
+            bekleyen.current = false;
+            sunucuyaYaz(veri);
+        } };
+        window.addEventListener("online", tekrar);
+        return () => window.removeEventListener("online", tekrar);
+    });
+    const yenile = async () => {
+        if (!oturum)
+            return;
+        setDurum("Yenileniyor…");
+        try {
+            const k = await apiGet(oturum, "veri");
+            if (k.hata) {
+                setDurum(k.hata);
+                return;
+            }
+            const c = paketiCoz(k.rol === "koc" ? k : Object.assign(Object.assign({}, k), { Ogrenciler: [k.ogrenci] }));
+            setVeri(c);
+            sonVeri.current = JSON.parse(JSON.stringify(c));
+            await onbellegeYaz(oturum, c);
+            setDurum("");
+        }
+        catch (e) {
+            setDurum("Yenilenemedi");
         }
     };
     const ogrGuncelle = (id, yama) => kaydet(Object.assign(Object.assign({}, veri), { ogrenciler: veri.ogrenciler.map((o) => {
             if (o.id !== id)
                 return o;
             const y = Object.assign(Object.assign({}, o), yama);
-            /* seviye veya alan değiştiyse konu listesini tamamla */
             if (yama.seviye !== undefined || yama.alan !== undefined) {
                 y.konular = konulariTamamla(y);
             }
             return y;
         }) }));
-    const secili = veri.ogrenciler.find((o) => o.id === seciliId) || null;
-    const salt = rol === "veli";
-    const rolDegistir = (r) => {
-        setRol(r);
-        setMesajAcik(false);
-        if (r === "yonetici")
-            setSeciliId(null);
-        else if (!seciliId && veri.ogrenciler.length)
-            setSeciliId(veri.ogrenciler[0].id);
+    /* Koç yeni öğrenci eklerken sunucu kod üretir */
+    const ogrenciEkle = async (taslak) => {
+        try {
+            const c = await apiPost(oturum, { islem: "ogrenciEkle", ogrenci: ogrenciSatiri(taslak) });
+            if (c.hata) {
+                setDurum(c.hata);
+                return;
+            }
+            const yeni = bosOgrenci(c.ogrenci);
+            yeni.konular = yeniKonular(yeni);
+            const v = Object.assign(Object.assign({}, veri), { ogrenciler: [...veri.ogrenciler, yeni] });
+            setVeri(v);
+            sonVeri.current = JSON.parse(JSON.stringify(Object.assign(Object.assign({}, v), { ogrenciler: v.ogrenciler.map((o) => o.id === yeni.id ? Object.assign(Object.assign({}, o), { konular: {} }) : o) })));
+            kaydet(v);
+        }
+        catch (e) {
+            setDurum("Öğrenci eklenemedi");
+        }
     };
+    const secili = veri.ogrenciler.find((o) => o.id === seciliId) || null;
+    if (!oturum && !yukleniyor) {
+        return React.createElement(GirisEkrani, { girisYap: baglan, hata: girisHata, bekliyor: bekliyor });
+    }
     if (yukleniyor) {
         return React.createElement("div", { className: "kok" },
             React.createElement(Stil, null),
@@ -1397,14 +1745,12 @@ function DerbentLgs() {
             secili && !mesajAcik && (React.createElement("button", { className: "msj-dugme", onClick: () => setMesajAcik(true), "aria-label": "Mesajlar" },
                 React.createElement("span", { className: "msj-ikon" }, "\u2709"),
                 okunmamis(secili, rol) > 0 && (React.createElement("span", { className: "msj-badge" }, okunmamis(secili, rol)))))),
-        React.createElement("div", { className: "demo-bar" },
-            React.createElement("span", { className: "demo-a" }, "DEMO G\u00D6R\u00DCN\u00DCM\u00DC"),
-            React.createElement("div", { className: "demo-d" }, [["yonetici", "Koç"], ["ogrenci", "Öğrenci"], ["veli", "Veli"]].map(([r, a]) => (React.createElement("button", { key: r, onClick: () => rolDegistir(r), className: rol === r ? "demo-b etkin" : "demo-b" }, a))))),
-        salt && React.createElement("div", { className: "uyari" }, "Bu ekran salt okunur. Veli yaln\u0131zca izler."),
-        !panelde && secili && !mesajAcik && (React.createElement("nav", { className: "alt" }, [["ozet", "Özet"], ["program", "Plan"], ["soru", "Soru"],
-            ["konu", "Konu"], ["deneme", "Deneme"], ["analiz", "Analiz"],
-            ["kitap", "Kitap"]].map(([id, ad]) => (React.createElement("button", { key: id, onClick: () => setSekme(id), className: sekme === id ? "alt-b etkin" : "alt-b" }, ad))))),
-        React.createElement("main", { className: panelde ? "govde panel-govde" : "govde" }, mesajAcik && secili ? (React.createElement(Mesajlar, { o: secili, set: (y) => ogrGuncelle(secili.id, y), rol: rol })) : panelde ? (React.createElement(Panel, { veri: veri, kaydet: kaydet, setSeciliId: setSeciliId, setMesajAcik: setMesajAcik, rol: rol })) : !secili ? (React.createElement(Bos, { baslik: "\u00D6\u011Frenci yok", metin: "Ko\u00E7 panelinden \u00F6\u011Frenci ekleyin." })) : (React.createElement(React.Fragment, null,
+        React.createElement("div", { className: "durum-bar" },
+            React.createElement("span", { className: "durum-y" }, durum || (salt ? "Salt okunur görünüm" : "")),
+            React.createElement("div", { className: "durum-d" },
+                React.createElement("button", { className: "durum-b", onClick: yenile }, "Yenile"),
+                React.createElement("button", { className: "durum-b", onClick: cikis }, "\u00C7\u0131k\u0131\u015F"))),
+        React.createElement("main", { className: panelde ? "govde panel-govde" : "govde" }, mesajAcik && secili ? (React.createElement(Mesajlar, { o: secili, set: (y) => ogrGuncelle(secili.id, y), rol: rol })) : panelde ? (React.createElement(Panel, { veri: veri, kaydet: kaydet, setSeciliId: setSeciliId, setMesajAcik: setMesajAcik, rol: rol, ogrenciEkle: ogrenciEkle })) : !secili ? (React.createElement(Bos, { baslik: "\u00D6\u011Frenci bulunamad\u0131", metin: "Ko\u00E7unuzla ileti\u015Fime ge\u00E7in." })) : (React.createElement(React.Fragment, null,
             sekme === "ozet" && React.createElement(Ozet, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc, rol: rol }),
             sekme === "program" && React.createElement(Takvim, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc, rol: rol, sablonlar: veri.sablonlar || [], setSablonlar: (l) => kaydet(Object.assign(Object.assign({}, veri), { sablonlar: l })) }),
             sekme === "soru" && React.createElement(Soru, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt }),
@@ -1412,12 +1758,15 @@ function DerbentLgs() {
             sekme === "deneme" && React.createElement(Deneme, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt }),
             sekme === "analiz" && React.createElement(Analiz, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc }),
             sekme === "kitap" && React.createElement(Kitap, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt })))),
+        !panelde && secili && !mesajAcik && (React.createElement("nav", { className: "alt" }, [["ozet", "Özet"], ["program", "Plan"], ["soru", "Soru"],
+            ["konu", "Konu"], ["deneme", "Deneme"], ["analiz", "Analiz"],
+            ["kitap", "Kitap"]].map(([id, ad]) => (React.createElement("button", { key: id, onClick: () => setSekme(id), className: sekme === id ? "alt-b etkin" : "alt-b" }, ad))))),
         React.createElement(VideoOynatici, { video: video, kapat: () => setVideo(null) })));
 }
 /* ================================================================== */
 /*  YÖNETİCİ PANELİ                                                    */
 /* ================================================================== */
-function Panel({ veri, kaydet, setSeciliId, setMesajAcik, rol }) {
+function Panel({ veri, kaydet, setSeciliId, setMesajAcik, rol, ogrenciEkle }) {
     const [ekle, setEkle] = useState(false);
     const [sirala, setSirala] = useState("durum");
     const [suzgec, setSuzgec] = useState("hepsi");
@@ -1448,20 +1797,18 @@ function Panel({ veri, kaydet, setSeciliId, setMesajAcik, rol }) {
             riskli: liste.filter((x) => x.durum.tip === "kritik").length,
         };
     }, [liste]);
-    const ogrenciEkle = () => {
+    const yeniOgrenci = () => {
         if (!f.ad.trim())
             return;
         const taslak = {
-            id: `o-${Date.now()}`, kod: kodUret(), ad: f.ad.trim(),
+            ad: f.ad.trim(),
             sinif: f.sinif || (f.seviye === "yks" ? "12" : "8"),
             seviye: f.seviye, alan: f.alan,
             hedefLise: f.hedefLise || "Belirlenmedi",
             hedefDilim: f.hedefDilim || "",
             haftalikHedef: Number(f.haftalikHedef) || 300,
-            kayitlar: [], denemeler: [], kitaplar: [], gorevler: [], kaynaklar: [],
         };
-        taslak.konular = yeniKonular(taslak);
-        kaydet(Object.assign(Object.assign({}, veri), { ogrenciler: [...veri.ogrenciler, taslak] }));
+        ogrenciEkle(taslak);
         setF({ ad: "", sinif: "", seviye: "lgs", alan: "say",
             hedefLise: "", hedefDilim: "", haftalikHedef: "400" });
         setEkle(false);
@@ -1554,7 +1901,7 @@ function Panel({ veri, kaydet, setSeciliId, setMesajAcik, rol }) {
                     React.createElement(Alan, { etiket: "Haftal\u0131k soru hedefi", type: "number", value: f.haftalikHedef, onChange: (e) => setF(Object.assign(Object.assign({}, f), { haftalikHedef: e.target.value })) })),
                 React.createElement(Alan, { etiket: f.seviye === "yks" ? "Hedef bölüm" : "Hedef lise", value: f.hedefLise, placeholder: f.seviye === "yks" ? "Örn. Tıp Fakültesi" : "Örn. Konya Fen Lisesi", onChange: (e) => setF(Object.assign(Object.assign({}, f), { hedefLise: e.target.value })) }),
                 React.createElement(Alan, { etiket: f.seviye === "yks" ? "Hedef sıralama" : "Hedef yüzdelik dilim", type: "number", step: f.seviye === "yks" ? "1" : "0.01", value: f.hedefDilim, placeholder: f.seviye === "yks" ? "Örn. 20000" : "Örn. 1", onChange: (e) => setF(Object.assign(Object.assign({}, f), { hedefDilim: e.target.value })) })),
-            React.createElement("button", { className: "birincil", onClick: ogrenciEkle }, "\u00D6\u011Frenciyi kaydet"))),
+            React.createElement("button", { className: "birincil", onClick: yeniOgrenci }, "\u00D6\u011Frenciyi kaydet"))),
         liste.length === 0 && (React.createElement(Bos, { baslik: "\u00D6\u011Frenci yok", metin: "Yukar\u0131dan \u00F6\u011Frenci ekleyin." })),
         liste.map((x) => {
             const sd = x.o.seviye === "yks"
@@ -3894,8 +4241,38 @@ function Stil() {
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ust-alt{font-size:10.5px;color:var(--sol);font-weight:600;letter-spacing:.4px;margin-top:2px;}
 
-.demo-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:9px 16px;background:var(--tur-a);border-bottom:1px solid var(--cizgi);}
+.durum-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:7px 16px;background:var(--tur-a);border-bottom:1px solid var(--cizgi);
+  min-height:34px;}
+.durum-y{font-size:10.5px;font-weight:700;color:var(--tur);}
+.durum-d{display:flex;gap:5px;}
+.durum-b{background:#fff;border:1px solid var(--cizgi);color:var(--sol);
+  font-family:inherit;font-weight:800;font-size:10px;padding:5px 11px;
+  border-radius:99px;cursor:pointer;}
+.durum-b:hover{border-color:var(--tur);color:var(--tur);}
+
+/* giriş ekranı */
+.giris{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  padding:20px;background:linear-gradient(160deg,#F1F6F7 0%,#E2EFF1 100%);
+  font-family:'Montserrat',system-ui,sans-serif;}
+.giris-kutu{width:100%;max-width:360px;background:#fff;border-radius:22px;
+  padding:30px 26px;box-shadow:0 12px 40px rgba(18,48,58,.12);
+  display:flex;flex-direction:column;align-items:center;}
+.giris-b{font-size:21px;font-weight:900;letter-spacing:-.4px;color:#12303A;
+  margin-top:14px;}
+.giris-a{font-size:11.5px;font-weight:600;color:#6C8A93;margin-top:3px;}
+.giris-kapilar{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
+  width:100%;margin:22px 0 16px;}
+.giris-k{background:#EDF4F5;border:1.5px solid transparent;border-radius:11px;
+  padding:11px 6px;font-family:inherit;font-weight:800;font-size:12px;
+  color:#6C8A93;cursor:pointer;}
+.giris-k.etkin{background:#06788C;color:#fff;border-color:#06788C;}
+.giris-alan{width:100%;}
+.giris-alan input{text-align:center;letter-spacing:2px;font-size:17px;}
+.giris-kutu .birincil{margin-top:16px;}
+.giris-kutu .hata{width:100%;}
+.giris-not{font-size:10.5px;font-weight:600;color:#6C8A93;margin-top:16px;
+  text-align:center;line-height:1.5;}
 .demo-a{font-size:9px;font-weight:800;letter-spacing:1.2px;color:var(--tur);}
 .demo-d{display:flex;gap:4px;}
 .demo-b{background:#FFFFFF;border:1px solid var(--cizgi);color:var(--sol);
@@ -4795,7 +5172,7 @@ function Stil() {
   .ust{padding:18px 28px;gap:14px;}
   .ust-ad{font-size:19px;}
   .ust-alt{font-size:11.5px;}
-  .demo-bar{padding:10px 28px;}
+  .durum-bar{padding:8px 32px;}
   .uyari{margin:14px 28px 0;}
 
   /* sekmeler alta değil üste */
