@@ -1310,12 +1310,11 @@ function VideoOynatici({ video, kapat }) {
             React.createElement("div", { className: "vid-ust" },
                 React.createElement("div", null,
                     React.createElement("div", { className: "vid-baslik" }, video.baslik),
-                    video.liste.length > 1 && (React.createElement("div", { className: "vid-alt" },
-                        bolumAdi(su, i),
-                        " \u00B7 ",
-                        i + 1,
-                        "/",
-                        video.liste.length))),
+                    (video.liste.length > 1 || su.sure) && (React.createElement("div", { className: "vid-alt" },
+                        video.liste.length > 1
+                            ? `${bolumAdi(su, i)} · ${i + 1}/${video.liste.length}` : "",
+                        video.liste.length > 1 && su.sure ? " · " : "",
+                        su.sure || ""))),
                 React.createElement("button", { className: "vid-kapat", onClick: kapat, "aria-label": "Kapat" }, "\u00D7")),
             kaynak ? (React.createElement("div", { className: "vid-cerceve" },
                 React.createElement("iframe", { src: kaynak, title: video.baslik, frameBorder: "0", allowFullScreen: true, allow: "accelerometer; encrypted-media; gyroscope; picture-in-picture" }))) : (React.createElement("div", { className: "vid-uyari" }, "Bu ba\u011Flant\u0131 tan\u0131namad\u0131. YouTube adresinin tamam\u0131n\u0131 yap\u0131\u015Ft\u0131rd\u0131\u011F\u0131n\u0131zdan emin olun.")),
@@ -3951,7 +3950,8 @@ function Konu({ o, set, salt, videoAc, rol, listeGetir }) {
         const t = Date.now();
         const yeniKonu = kaynakVideolar.map((v, i) => ({
             id: `${ders}-yt${t}-${i}`, ad: v.baslik, asama: 0,
-            videolar: [{ id: `v${t}-${i}`, ad: "", url: v.url, izlendi: false }],
+            videolar: [{ id: `v${t}-${i}`, ad: "", url: v.url, izlendi: false,
+                    sure: v.sure || "", dakika: v.dakika || 0 }],
         }));
         set({
             konular: Object.assign(Object.assign({}, o.konular), { [ders]: degistir ? yeniKonu : [...liste, ...yeniKonu] }),
@@ -4048,7 +4048,8 @@ function Konu({ o, set, salt, videoAc, rol, listeGetir }) {
                 React.createElement("div", { className: "ol-ust" },
                     React.createElement("b", null,
                         listeSonuc.adet,
-                        " video bulundu"),
+                        " video \u00B7 ",
+                        listeSonuc.toplamSure || "—"),
                     React.createElement("span", null,
                         yeniVideolar.length,
                         " tanesi listede yok")),
@@ -4056,6 +4057,7 @@ function Konu({ o, set, salt, videoAc, rol, listeGetir }) {
                     listeSonuc.videolar.slice(0, 40).map((v) => (React.createElement("div", { className: varOlan(v.baslik) ? "ol-v var" : "ol-v", key: v.sira },
                         React.createElement("span", { className: "ol-s" }, v.sira),
                         React.createElement("span", { className: "ol-b" }, v.baslik),
+                        v.sure && React.createElement("span", { className: "ol-sure" }, v.sure),
                         varOlan(v.baslik) && React.createElement("i", null, "zaten var")))),
                     listeSonuc.videolar.length > 40 && (React.createElement("div", { className: "ipuc" },
                         "\u2026 ve ",
@@ -4091,7 +4093,8 @@ function Konu({ o, set, salt, videoAc, rol, listeGetir }) {
                             vd.toplam > 1 && (React.createElement("span", { className: "konu-vid-sayi" },
                                 vd.izlenen,
                                 "/",
-                                vd.toplam))),
+                                vd.toplam)),
+                            vd.toplam === 1 && vd.liste[0].sure && (React.createElement("span", { className: "konu-sure" }, vd.liste[0].sure))),
                         ASAMALAR.map((_, i) => {
                             const seviye = i + 1;
                             const acik = k.asama >= seviye;
@@ -4106,7 +4109,9 @@ function Konu({ o, set, salt, videoAc, rol, listeGetir }) {
                             vd.toplam > 1 ? ` · ${vd.toplam} BÖLÜM` : ""),
                         vd.liste.map((v, vi) => (React.createElement("div", { className: "bolum", key: v.id },
                             React.createElement("button", { className: v.izlendi ? "bolum-k dolu" : "bolum-k", onClick: () => !salt && izlendiDegistir(k.id, v.id), "aria-label": "\u0130zlendi" }, v.izlendi ? "✓" : vi + 1),
-                            React.createElement("div", { className: "bolum-orta" }, salt ? (React.createElement("div", { className: "bolum-ad" }, bolumAdi(v, vi))) : (React.createElement(React.Fragment, null,
+                            React.createElement("div", { className: "bolum-orta" }, salt ? (React.createElement("div", { className: "bolum-ad" },
+                                bolumAdi(v, vi),
+                                v.sure && React.createElement("span", { className: "konu-sure" }, v.sure))) : (React.createElement(React.Fragment, null,
                                 React.createElement("input", { className: "vid-giris ufakgiris", value: v.ad || "", placeholder: `${vi + 1}. Bölüm (ad isteğe bağlı)`, onChange: (e) => bolumYaz(k.id, v.id, { ad: e.target.value }) }),
                                 React.createElement("input", { className: "vid-giris", value: v.url, placeholder: "YouTube ba\u011Flant\u0131s\u0131", onChange: (e) => bolumYaz(k.id, v.id, { url: e.target.value }) })))),
                             React.createElement("div", { className: "bolum-sag" },
