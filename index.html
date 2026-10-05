@@ -2661,6 +2661,16 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
         return () => window.removeEventListener("keydown", tus);
     });
     /* Bu derste daha önce yazılan görev adları — tekrar yazmamak için */
+    /* Konunun toplam video süresi (dakika) */
+    const konuSuresi = (dersId, konuAd) => {
+        const vd = videoBul(o, dersId, konuAd);
+        return vd.liste.reduce((a, v) => a + (Number(v.dakika) || 0), 0);
+    };
+    /* Konu seçilince görev süresi videodan önerilir */
+    const konuSec = (ad) => {
+        const dk = konuSuresi(f.ders, ad);
+        setF(Object.assign(Object.assign({}, f), { konu: ad, sure: dk ? Math.max(15, Math.min(240, Math.ceil(dk / 5) * 5)) : f.sure }));
+    };
     const sonKullanilan = useMemo(() => {
         const q = f.konu.trim().toLocaleLowerCase("tr");
         const gorulen = [];
@@ -3145,10 +3155,22 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
                         React.createElement("div", { className: "gd-konular" },
                             sonKullanilan.length > 0 && (React.createElement(React.Fragment, null,
                                 React.createElement("div", { className: "gd-ayrac" }, "SON KULLANDIKLARIN"),
-                                sonKullanilan.map((ad) => (React.createElement("button", { key: "s" + ad, className: f.konu === ad ? "gd-konu etkin" : "gd-konu", onClick: () => setF(Object.assign(Object.assign({}, f), { konu: ad })) }, ad))))),
+                                sonKullanilan.map((ad) => (React.createElement("button", { key: "s" + ad, className: f.konu === ad ? "gd-konu etkin" : "gd-konu", onClick: () => konuSec(ad) },
+                                    ad,
+                                    konuSuresi(f.ders, ad) > 0 && (React.createElement("i", null,
+                                        konuSuresi(f.ders, ad),
+                                        " dk"))))))),
                             eslesenKonular.length > 0 && (React.createElement("div", { className: "gd-ayrac" }, "M\u00DCFREDAT KONULARI")),
-                            eslesenKonular.map((k) => (React.createElement("button", { key: k.id, className: f.konu === k.ad ? "gd-konu etkin" : "gd-konu", onClick: () => setF(Object.assign(Object.assign({}, f), { konu: k.ad })) },
-                                k.ad,
+                            eslesenKonular.map((k) => (React.createElement("button", { key: k.id, className: f.konu === k.ad ? "gd-konu etkin" : "gd-konu", onClick: () => konuSec(k.ad) },
+                                React.createElement("span", { className: "gd-k-ad" }, k.ad),
+                                (() => {
+                                    const vd = videoDurum(k);
+                                    const dk = vd.liste.reduce((a, v) => a + (Number(v.dakika) || 0), 0);
+                                    return dk > 0 ? React.createElement("i", { className: "sure" },
+                                        "\u25B6 ",
+                                        dk,
+                                        " dk") : null;
+                                })(),
                                 k.asama > 0 && React.createElement("i", null, ASAMALAR[k.asama - 1])))),
                             f.konu.trim() && !listedeVar && (React.createElement("div", { className: "gd-serbest" },
                                 "\u201C",
@@ -3910,6 +3932,7 @@ function Konu({ o, set, salt, videoAc, rol, listeGetir }) {
     const [ders, setDers] = useState(dl[0].id);
     const [yeni, setYeni] = useState("");
     const [acikKonu, setAcikKonu] = useState(null);
+    const [bolunecek, setBolunecek] = useState(null);
     const liste = o.konular[ders] || [];
     const ayirici = o.seviye === "yks" ? tytUzunluk() : 0;
     const aktifDers = dl.find((x) => x.id === ders);
@@ -3983,6 +4006,34 @@ function Konu({ o, set, salt, videoAc, rol, listeGetir }) {
             video: undefined,
             videolar: videolariAl(k).filter((v) => v.id !== vid),
         });
+    };
+    /* Uzun videoyu parçalara böler; her parça kendi başlangıç saatinden açılır */
+    const videoBol = (konuId, vid, parcaDk) => {
+        const k = liste.find((x) => x.id === konuId);
+        const l = videolariAl(k);
+        const v = l.find((x) => x.id === vid);
+        const toplam = Number(v && v.dakika) || 0;
+        if (!toplam || toplam <= parcaDk)
+            return;
+        const temiz = String(v.url).split(/[&?]t=/)[0];
+        const ayrac = temiz.includes("?") ? "&" : "?";
+        const adet = Math.ceil(toplam / parcaDk);
+        const t = Date.now();
+        const parcalar = Array.from({ length: adet }, (_, i) => {
+            const bas = i * parcaDk;
+            const son = Math.min((i + 1) * parcaDk, toplam);
+            return {
+                id: `${vid}-p${t}-${i}`,
+                ad: `${i + 1}. parça · ${bas}-${son} dk`,
+                url: `${temiz}${ayrac}t=${bas * 60}s`,
+                izlendi: false, sure: `${son - bas}:00`, dakika: son - bas,
+            };
+        });
+        konuYaz(konuId, {
+            video: undefined,
+            videolar: l.reduce((a, x) => a.concat(x.id === vid ? parcalar : [x]), []),
+        });
+        setBolunecek(null);
     };
     const izlendiDegistir = (id, vid) => {
         const k = liste.find((x) => x.id === id);
@@ -4115,8 +4166,23 @@ function Konu({ o, set, salt, videoAc, rol, listeGetir }) {
                                 React.createElement("input", { className: "vid-giris ufakgiris", value: v.ad || "", placeholder: `${vi + 1}. Bölüm (ad isteğe bağlı)`, onChange: (e) => bolumYaz(k.id, v.id, { ad: e.target.value }) }),
                                 React.createElement("input", { className: "vid-giris", value: v.url, placeholder: "YouTube ba\u011Flant\u0131s\u0131", onChange: (e) => bolumYaz(k.id, v.id, { url: e.target.value }) })))),
                             React.createElement("div", { className: "bolum-sag" },
+                                !salt && Number(v.dakika) > 45 && (React.createElement("button", { className: "bolum-bol", onClick: () => setBolunecek(bolunecek === v.id ? null : v.id), title: "Par\u00E7alara b\u00F6l" }, "\u2442")),
                                 v.url && (React.createElement("button", { className: "vid-b dolu", onClick: () => izle(k, vi), "aria-label": "\u0130zle" }, "\u25B6")),
                                 !salt && (React.createElement("button", { className: "bolum-sil", onClick: () => bolumSil(k.id, v.id), "aria-label": "Sil" }, "\u00D7")))))),
+                        bolunecek && vd.liste.some((v) => v.id === bolunecek) && (React.createElement("div", { className: "bol-panel" },
+                            React.createElement("div", { className: "kutucuk-a" }, "KA\u00C7 DAK\u0130KALIK PAR\u00C7ALARA B\u00D6L\u00DCNS\u00DCN"),
+                            React.createElement("div", { className: "gd-sure" }, [20, 30, 40, 45, 60].map((n) => {
+                                const v = vd.liste.find((x) => x.id === bolunecek);
+                                const adet = Math.ceil((Number(v.dakika) || 0) / n);
+                                return (React.createElement("button", { key: n, className: "gd-s", onClick: () => videoBol(k.id, bolunecek, n) },
+                                    n,
+                                    " dk ",
+                                    React.createElement("i", null,
+                                        "\u00B7 ",
+                                        adet,
+                                        " par\u00E7a")));
+                            })),
+                            React.createElement("div", { className: "ipuc", style: { textAlign: "left" } }, "Her par\u00E7a videonun kendi dakikas\u0131ndan a\u00E7\u0131l\u0131r. B\u00F6lme geri al\u0131namaz ama par\u00E7alar\u0131 silip listeyi yeniden getirebilirsiniz."))),
                         !salt && (React.createElement("div", { className: "konu-panel-d" },
                             React.createElement("button", { className: "ikincil", onClick: () => bolumEkle(k.id) }, "+ B\u00F6l\u00FCm ekle"),
                             React.createElement("button", { className: "ufak tehlike", onClick: () => konuSil(k.id) }, "Konuyu sil"))),
