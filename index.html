@@ -1385,6 +1385,7 @@ const bosOgrenci = (o) => ({
     hedefLise: o.hedefLise || "", hedefDilim: o.hedefDilim === undefined ? "" : o.hedefDilim,
     haftalikHedef: Number(o.haftalikHedef) || 300,
     dersHedef: o.dersHedef || {},
+    oynatmaListeleri: o.oynatmaListeleri || {},
     sinavTarihi: o.sinavTarihi || "", hedefGorsel: o.hedefGorsel || "",
     gorevler: [], kayitlar: [], denemeler: [], konular: {},
     kitaplar: [], mesajlar: [], gorusmeler: [], kaynaklar: [],
@@ -1510,12 +1511,14 @@ const tabloFarki = (eski, yeni) => {
     };
 };
 const OGRENCI_ALANLARI = ["id", "kod", "veliKod", "ad", "sinif", "seviye", "alan",
-    "hedefLise", "hedefDilim", "haftalikHedef", "dersHedef", "sinavTarihi", "hedefGorsel"];
+    "hedefLise", "hedefDilim", "haftalikHedef", "dersHedef", "oynatmaListeleri", "sinavTarihi", "hedefGorsel"];
 const ogrenciSatiri = (o) => {
     const r = {};
     OGRENCI_ALANLARI.forEach((a) => (r[a] = o[a] === undefined ? "" : o[a]));
     if (!r.dersHedef || typeof r.dersHedef !== "object")
         r.dersHedef = {};
+    if (!r.oynatmaListeleri || typeof r.oynatmaListeleri !== "object")
+        r.oynatmaListeleri = {};
     return r;
 };
 /* ================================================================== */
@@ -1725,6 +1728,17 @@ function DerbentLgs() {
         window.addEventListener("online", tekrar);
         return () => window.removeEventListener("online", tekrar);
     });
+    /* YouTube oynatma listesini sunucu üzerinden okur (anahtar sunucuda kalır) */
+    const listeGetir = async (adres) => {
+        if (!oturum)
+            return { hata: "Oturum yok." };
+        try {
+            return await apiGet(Object.assign(Object.assign({}, oturum), { liste: adres }), "liste");
+        }
+        catch (e) {
+            return { hata: "Sunucuya ulaşılamadı." };
+        }
+    };
     const yenile = async () => {
         if (!oturum)
             return;
@@ -1811,7 +1825,7 @@ function DerbentLgs() {
             sekme === "ozet" && React.createElement(Ozet, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc, rol: rol, setSekme: setSekme }),
             sekme === "program" && React.createElement(Takvim, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc, rol: rol, sablonlar: veri.sablonlar || [], setSablonlar: (l) => kaydet(Object.assign(Object.assign({}, veri), { sablonlar: l })) }),
             sekme === "soru" && React.createElement(Soru, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt }),
-            sekme === "konu" && React.createElement(Konu, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc }),
+            sekme === "konu" && React.createElement(Konu, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc, rol: rol, listeGetir: listeGetir }),
             sekme === "deneme" && React.createElement(Deneme, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt }),
             sekme === "analiz" && React.createElement(Analiz, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc }),
             sekme === "kitap" && React.createElement(Kitap, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt })))),
@@ -3891,7 +3905,8 @@ function Soru({ o, set, salt }) {
 /* ================================================================== */
 /*  4. KONU TAKİBİ                                                     */
 /* ================================================================== */
-function Konu({ o, set, salt, videoAc }) {
+function Konu({ o, set, salt, videoAc, rol, listeGetir }) {
+    const koc = rol === "yonetici";
     const dl = dersleriGetir(o);
     const [ders, setDers] = useState(dl[0].id);
     const [yeni, setYeni] = useState("");
@@ -3899,6 +3914,51 @@ function Konu({ o, set, salt, videoAc }) {
     const liste = o.konular[ders] || [];
     const ayirici = o.seviye === "yks" ? tytUzunluk() : 0;
     const aktifDers = dl.find((x) => x.id === ders);
+    /* --- YouTube oynatma listesi --- */
+    const mevcutListe = (o.oynatmaListeleri || {})[ders] || "";
+    const [listeAdres, setListeAdres] = useState("");
+    const [listeSonuc, setListeSonuc] = useState(null);
+    const [listeHata, setListeHata] = useState("");
+    const [listeBekle, setListeBekle] = useState(false);
+    useEffect(() => {
+        setListeAdres(mevcutListe);
+        setListeSonuc(null);
+        setListeHata("");
+    }, [ders, mevcutListe]);
+    const varOlan = (baslik) => liste.some((k) => k.ad.trim().toLocaleLowerCase("tr")
+        === baslik.trim().toLocaleLowerCase("tr"));
+    const yeniVideolar = listeSonuc
+        ? listeSonuc.videolar.filter((v) => !varOlan(v.baslik)) : [];
+    const listeyiCek = async () => {
+        setListeBekle(true);
+        setListeHata("");
+        setListeSonuc(null);
+        const c = await listeGetir(listeAdres.trim());
+        setListeBekle(false);
+        if (!c || c.hata) {
+            setListeHata(c ? c.hata : "Liste alınamadı.");
+            return;
+        }
+        setListeSonuc(c);
+    };
+    const listeyiUygula = (degistir) => {
+        if (!listeSonuc)
+            return;
+        const kaynakVideolar = degistir ? listeSonuc.videolar : yeniVideolar;
+        if (degistir && !window.confirm(`${aktifDers === null || aktifDers === void 0 ? void 0 : aktifDers.ad} dersindeki ${liste.length} konu silinip ` +
+            `${listeSonuc.adet} video konusu eklenecek. Emin misiniz?`))
+            return;
+        const t = Date.now();
+        const yeniKonu = kaynakVideolar.map((v, i) => ({
+            id: `${ders}-yt${t}-${i}`, ad: v.baslik, asama: 0,
+            videolar: [{ id: `v${t}-${i}`, ad: "", url: v.url, izlendi: false }],
+        }));
+        set({
+            konular: Object.assign(Object.assign({}, o.konular), { [ders]: degistir ? yeniKonu : [...liste, ...yeniKonu] }),
+            oynatmaListeleri: Object.assign(Object.assign({}, (o.oynatmaListeleri || {})), { [ders]: listeAdres.trim() }),
+        });
+        setListeSonuc(null);
+    };
     const konuYaz = (id, deg) => set({
         konular: Object.assign(Object.assign({}, o.konular), { [ders]: liste.map((k) => (k.id === id ? Object.assign(Object.assign({}, k), deg) : k)) }),
     });
@@ -3973,6 +4033,40 @@ function Konu({ o, set, salt, videoAc }) {
     return (React.createElement(React.Fragment, null,
         React.createElement("section", { className: "kart" },
             React.createElement(DersCipleri, { dersler: dl, secili: ders, sec: setDers, ayirici: ayirici })),
+        koc && (React.createElement("section", { className: "kart" },
+            React.createElement("div", { className: "kart-ust" },
+                React.createElement("div", { className: "etiket vurgu", style: { "--bc": "#B8262A" } },
+                    React.createElement(Ikon, { ad: "kitap", boyut: 14 }),
+                    " OYNATMA L\u0130STES\u0130 \u00B7 ", aktifDers === null || aktifDers === void 0 ? void 0 :
+                    aktifDers.kisa),
+                mevcutListe && React.createElement("div", { className: "sayac" }, "kay\u0131tl\u0131")),
+            React.createElement("div", { className: "ol-satir" },
+                React.createElement("input", { className: "vid-giris", value: listeAdres, placeholder: "YouTube oynatma listesi adresi", onChange: (e) => setListeAdres(e.target.value) }),
+                React.createElement("button", { className: "ikincil", disabled: listeBekle || !listeAdres.trim(), onClick: listeyiCek }, listeBekle ? "Getiriliyor…" : "Getir")),
+            listeHata && React.createElement("div", { className: "hata" }, listeHata),
+            listeSonuc && (React.createElement("div", { className: "ol-sonuc" },
+                React.createElement("div", { className: "ol-ust" },
+                    React.createElement("b", null,
+                        listeSonuc.adet,
+                        " video bulundu"),
+                    React.createElement("span", null,
+                        yeniVideolar.length,
+                        " tanesi listede yok")),
+                React.createElement("div", { className: "ol-liste" },
+                    listeSonuc.videolar.slice(0, 40).map((v) => (React.createElement("div", { className: varOlan(v.baslik) ? "ol-v var" : "ol-v", key: v.sira },
+                        React.createElement("span", { className: "ol-s" }, v.sira),
+                        React.createElement("span", { className: "ol-b" }, v.baslik),
+                        varOlan(v.baslik) && React.createElement("i", null, "zaten var")))),
+                    listeSonuc.videolar.length > 40 && (React.createElement("div", { className: "ipuc" },
+                        "\u2026 ve ",
+                        listeSonuc.videolar.length - 40,
+                        " video daha"))),
+                React.createElement("div", { className: "konu-panel-d" },
+                    React.createElement("button", { className: "ikincil", disabled: !yeniVideolar.length, onClick: () => listeyiUygula(false) },
+                        yeniVideolar.length,
+                        " konuyu ekle"),
+                    React.createElement("button", { className: "ufak tehlike", onClick: () => listeyiUygula(true) }, "Bu dersin konular\u0131n\u0131 de\u011Fi\u015Ftir")))),
+            mevcutListe && !listeSonuc && (React.createElement("div", { className: "ipuc", style: { textAlign: "left" } }, "Kay\u0131tl\u0131 liste var. \u201CGetir\u201D diyerek yeni eklenen videolar\u0131 konu olarak ekleyebilirsiniz.")))),
         React.createElement("section", { className: "kart" },
             React.createElement("div", { className: "kart-ust" },
                 React.createElement("div", { className: "etiket" },
@@ -4743,6 +4837,22 @@ function Stil() {
 /* ikonlar ve bölüm renkleri */
 .ikon{flex-shrink:0;}
 .etiket.vurgu{display:flex;align-items:center;gap:6px;color:var(--bc);}
+
+/* oynatma listesi */
+.ol-satir{display:grid;grid-template-columns:1fr auto;gap:8px;}
+.ol-sonuc{margin-top:14px;padding:12px;background:var(--yzy2);border-radius:12px;}
+.ol-ust{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  font-size:12px;font-weight:600;color:var(--sol);margin-bottom:9px;}
+.ol-ust b{color:var(--met);font-weight:800;}
+.ol-liste{display:flex;flex-direction:column;gap:3px;max-height:260px;overflow-y:auto;}
+.ol-v{display:flex;align-items:center;gap:8px;background:#fff;border-radius:8px;
+  padding:7px 10px;font-size:12px;font-weight:700;color:var(--met);}
+.ol-v.var{opacity:.5;}
+.ol-s{flex-shrink:0;width:22px;font-size:10px;font-weight:900;color:var(--sol);
+  font-variant-numeric:tabular-nums;}
+.ol-b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ol-v i{font-style:normal;font-size:9px;font-weight:800;color:var(--sol);
+  background:var(--yzy2);padding:2px 6px;border-radius:4px;flex-shrink:0;}
 
 /* pomodoro */
 .pomo{display:flex;flex-direction:column;align-items:center;}
