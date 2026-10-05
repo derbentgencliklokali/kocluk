@@ -1254,6 +1254,23 @@ const dersGrubu = (o, dersId) => {
     return String(dersId).startsWith("a-") ? "ayt" : "tyt";
 };
 const kaynaklariAl = (o, grup) => (o.kaynaklar || []).filter((k) => k.grup === grup);
+/* Videoyu parçalara böler. Son parça 20 dakikanın altında kalacaksa
+   ayrı parça yapılmaz, bir öncekine eklenir:
+   154 dk / 45 → 45 + 45 + 64   ·   135 dk / 60 → 60 + 75 */
+const PARCA_ENAZ = 20;
+const parcalariHesapla = (toplam, parcaDk) => {
+    const liste = [];
+    let bas = 0;
+    while (bas < toplam) {
+        let son = Math.min(bas + parcaDk, toplam);
+        const kalan = toplam - son;
+        if (kalan > 0 && kalan < PARCA_ENAZ)
+            son = toplam;
+        liste.push({ bas, son });
+        bas = son;
+    }
+    return liste;
+};
 /* --- video --- */
 const videoKimlik = (url) => {
     if (!url)
@@ -4017,18 +4034,14 @@ function Konu({ o, set, salt, videoAc, rol, listeGetir }) {
             return;
         const temiz = String(v.url).split(/[&?]t=/)[0];
         const ayrac = temiz.includes("?") ? "&" : "?";
-        const adet = Math.ceil(toplam / parcaDk);
         const t = Date.now();
-        const parcalar = Array.from({ length: adet }, (_, i) => {
-            const bas = i * parcaDk;
-            const son = Math.min((i + 1) * parcaDk, toplam);
-            return {
-                id: `${vid}-p${t}-${i}`,
-                ad: `${i + 1}. parça · ${bas}-${son} dk`,
-                url: `${temiz}${ayrac}t=${bas * 60}s`,
-                izlendi: false, sure: `${son - bas}:00`, dakika: son - bas,
-            };
-        });
+        const parcalar = parcalariHesapla(toplam, parcaDk).map((x, i) => ({
+            id: `${vid}-p${t}-${i}`,
+            ad: `${i + 1}. parça · ${x.bas}-${x.son} dk`,
+            url: `${temiz}${ayrac}t=${x.bas * 60}s`,
+            izlendi: false,
+            sure: `${x.son - x.bas}:00`, dakika: x.son - x.bas,
+        }));
         konuYaz(konuId, {
             video: undefined,
             videolar: l.reduce((a, x) => a.concat(x.id === vid ? parcalar : [x]), []),
@@ -4173,14 +4186,15 @@ function Konu({ o, set, salt, videoAc, rol, listeGetir }) {
                             React.createElement("div", { className: "kutucuk-a" }, "KA\u00C7 DAK\u0130KALIK PAR\u00C7ALARA B\u00D6L\u00DCNS\u00DCN"),
                             React.createElement("div", { className: "gd-sure" }, [20, 30, 40, 45, 60].map((n) => {
                                 const v = vd.liste.find((x) => x.id === bolunecek);
-                                const adet = Math.ceil((Number(v.dakika) || 0) / n);
-                                return (React.createElement("button", { key: n, className: "gd-s", onClick: () => videoBol(k.id, bolunecek, n) },
-                                    n,
-                                    " dk ",
+                                const pl = parcalariHesapla(Number(v.dakika) || 0, n);
+                                if (pl.length < 2)
+                                    return null;
+                                return (React.createElement("button", { key: n, className: "gd-s bol-s", onClick: () => videoBol(k.id, bolunecek, n) },
+                                    pl.length,
+                                    " par\u00E7a",
                                     React.createElement("i", null,
-                                        "\u00B7 ",
-                                        adet,
-                                        " par\u00E7a")));
+                                        pl.map((x) => x.son - x.bas).join(" + "),
+                                        " dk")));
                             })),
                             React.createElement("div", { className: "ipuc", style: { textAlign: "left" } }, "Her par\u00E7a videonun kendi dakikas\u0131ndan a\u00E7\u0131l\u0131r. B\u00F6lme geri al\u0131namaz ama par\u00E7alar\u0131 silip listeyi yeniden getirebilirsiniz."))),
                         !salt && (React.createElement("div", { className: "konu-panel-d" },
