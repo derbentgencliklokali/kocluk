@@ -1451,24 +1451,45 @@ function DersCipleri({ dersler, secili, sec, ayirici }) {
 /* ================================================================== */
 const API = "https://script.google.com/macros/s/AKfycbx1xpOYoLwX3vHZz9m2qRr3t6BgHB5R_ntIraXoc5PFRk_b46OxWfZDLnlP0jMTYInbEg/exec";
 const OTURUM_KEY = "derbent-oturum";
+/* Sunucu yanıt vermezse istek sonsuza kadar beklemesin */
+const ZAMAN_ASIMI = 35000;
+const istek = async (adres, ayar) => {
+    const kontrol = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const sayac = setTimeout(() => kontrol && kontrol.abort(), ZAMAN_ASIMI);
+    try {
+        const y = await fetch(adres, Object.assign(Object.assign({}, (ayar || {})), (kontrol ? { signal: kontrol.signal } : {})));
+        if (!y.ok)
+            throw new Error("Sunucu hatası (" + y.status + ")");
+        const metin = await y.text();
+        try {
+            return JSON.parse(metin);
+        }
+        catch (e) {
+            /* Google bir hata sayfası döndürmüş olabilir */
+            throw new Error("Sunucu beklenmeyen bir yanıt verdi. " +
+                "Apps Script dağıtımını kontrol edin.");
+        }
+    }
+    catch (e) {
+        if (e.name === "AbortError") {
+            throw new Error("Sunucu 35 saniyede yanıt vermedi.");
+        }
+        throw e;
+    }
+    finally {
+        clearTimeout(sayac);
+    }
+};
 const apiGet = async (kimlik, islem) => {
     const q = new URLSearchParams(Object.assign({ islem }, kimlik));
-    const y = await fetch(`${API}?${q.toString()}`);
-    if (!y.ok)
-        throw new Error("Sunucuya ulaşılamadı (" + y.status + ")");
-    return y.json();
+    return istek(`${API}?${q.toString()}`);
 };
-const apiPost = async (kimlik, govde) => {
-    const y = await fetch(API, {
-        method: "POST",
-        /* text/plain, tarayıcının ön uçuş isteğini (CORS preflight) engeller */
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(Object.assign(Object.assign({}, kimlik), govde)),
-    });
-    if (!y.ok)
-        throw new Error("Sunucuya yazılamadı (" + y.status + ")");
-    return y.json();
-};
+const apiPost = async (kimlik, govde) => istek(API, {
+    method: "POST",
+    /* text/plain, tarayıcının ön uçuş isteğini (CORS preflight) engeller */
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(Object.assign(Object.assign({}, kimlik), govde)),
+});
 /* --- sunucu satırları → uygulama nesnesi --- */
 const bosOgrenci = (o) => ({
     id: o.id, kod: o.kod, veliKod: o.veliKod, ad: o.ad, sinif: o.sinif,
@@ -1643,6 +1664,16 @@ const ogrenciSatiri = (o) => {
 function GirisEkrani({ girisYap, hata, bekliyor }) {
     const [kapi, setKapi] = useState("ogrenci");
     const [deger, setDeger] = useState("");
+    const [gecen, setGecen] = useState(0);
+    /* Bekleme uzarsa kullanıcı ne olduğunu bilsin */
+    useEffect(() => {
+        if (!bekliyor) {
+            setGecen(0);
+            return;
+        }
+        const t = setInterval(() => setGecen((x) => x + 1), 1000);
+        return () => clearInterval(t);
+    }, [bekliyor]);
     const gonder = () => {
         if (!deger.trim())
             return;
@@ -1661,7 +1692,10 @@ function GirisEkrani({ girisYap, hata, bekliyor }) {
                 React.createElement("span", null, kapi === "koc" ? "KOÇ ŞİFRESİ" : "GİRİŞ KODU"),
                 React.createElement("input", { value: deger, autoCapitalize: kapi === "koc" ? "none" : "characters", type: kapi === "koc" ? "password" : "text", placeholder: kapi === "koc" ? "Şifreniz" : "Örn. GB76UC", onChange: (e) => setDeger(e.target.value), onKeyDown: (e) => e.key === "Enter" && gonder() })),
             hata && React.createElement("div", { className: "hata" }, hata),
-            React.createElement("button", { className: "birincil", onClick: gonder, disabled: bekliyor || !deger.trim() }, bekliyor ? "Bağlanılıyor…" : "Giriş yap"),
+            React.createElement("button", { className: "birincil", onClick: gonder, disabled: bekliyor || !deger.trim() }, bekliyor
+                ? (gecen > 8 ? `Bağlanılıyor… ${gecen} sn` : "Bağlanılıyor…")
+                : "Giriş yap"),
+            bekliyor && gecen > 12 && (React.createElement("div", { className: "giris-bekle" }, "Sunucu yava\u015F yan\u0131t veriyor. \u0130lk a\u00E7\u0131l\u0131\u015Fta bu normaldir; 35 saniyede yan\u0131t gelmezse hata g\u00F6sterilecek.")),
             React.createElement("div", { className: "giris-not" }, kapi === "koc"
                 ? "Şifrenizi koçluk tablosundaki Koçluk menüsünden görebilirsiniz."
                 : "Kodunuz yoksa eğitim koçunuzdan isteyin."))));
@@ -5236,6 +5270,9 @@ function Stil() {
 .giris-alan input{text-align:center;letter-spacing:2px;font-size:17px;}
 .giris-kutu .birincil{margin-top:16px;}
 .giris-kutu .hata{width:100%;}
+.giris-bekle{font-size:10.5px;font-weight:600;color:#8A5C0B;background:#FDF6E7;
+  border-radius:9px;padding:9px 11px;margin-top:10px;line-height:1.5;
+  text-align:center;}
 .giris-not{font-size:10.5px;font-weight:600;color:#6C8A93;margin-top:16px;
   text-align:center;line-height:1.5;}
 .demo-a{font-size:9px;font-weight:800;letter-spacing:1.2px;color:var(--tur);}
