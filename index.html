@@ -1721,7 +1721,7 @@ function DerbentLgs() {
             setYukleniyor(false);
         }
         try {
-            const k = await apiGet(kimlik, "veri");
+            const k = await apiGet(Object.assign(Object.assign({}, kimlik), (kimlik.sifre ? { hafif: "1" } : {})), "veri");
             if (k.hata) {
                 if (!onbellek) {
                     setGirisHata(k.hata);
@@ -1850,7 +1850,7 @@ function DerbentLgs() {
             return;
         setDurum("Yenileniyor…");
         try {
-            const k = await apiGet(oturum, "veri");
+            const k = await apiGet(Object.assign(Object.assign({}, oturum), (oturum.sifre ? { hafif: "1" } : {})), "veri");
             if (k.hata) {
                 setDurum(k.hata);
                 return;
@@ -1884,13 +1884,50 @@ function DerbentLgs() {
             }
             const yeni = bosOgrenci(c.ogrenci);
             yeni.konular = yeniKonular(yeni);
+            setDurum("Konu listesi hazırlanıyor…");
             const v = Object.assign(Object.assign({}, veri), { ogrenciler: [...veri.ogrenciler, yeni] });
             setVeri(v);
             sonVeri.current = JSON.parse(JSON.stringify(Object.assign(Object.assign({}, v), { ogrenciler: v.ogrenciler.map((o) => o.id === yeni.id ? Object.assign(Object.assign({}, o), { konular: {} }) : o) })));
             kaydet(v);
+            setTimeout(() => setDurum(""), 3000);
         }
         catch (e) {
             setDurum("Öğrenci eklenemedi");
+        }
+    };
+    /* Koç bir öğrenciyi açtığında o öğrencinin konuları ayrıca indirilir.
+       Açılışta bütün öğrencilerin konularını indirmek sayfayı çok yavaşlatıyordu. */
+    const ogrenciAc = async (id) => {
+        setSeciliId(id);
+        const o = veri.ogrenciler.find((x) => x.id === id);
+        if (!o || rol !== "yonetici")
+            return;
+        const doluMu = Object.values(o.konular || {}).some((l) => (l || []).length);
+        if (doluMu)
+            return;
+        setDurum("Konular yükleniyor…");
+        try {
+            const c = await apiGet(Object.assign(Object.assign({}, oturum), { ogrenciId: id }), "konular");
+            if (c.hata) {
+                setDurum(c.hata);
+                return;
+            }
+            const harita = {};
+            (c.Konular || []).forEach((r) => {
+                if (!harita[r.ders])
+                    harita[r.ders] = [];
+                harita[r.ders].push({ id: r.id, ad: r.ad,
+                    asama: Number(r.asama) || 0, videolar: r.videolar || undefined });
+            });
+            const guncelle = (liste) => liste.map((x) => x.id === id ? Object.assign(Object.assign({}, x), { konular: konulariTamamla(Object.assign(Object.assign({}, x), { konular: harita })) }) : x);
+            setVeri((v) => (Object.assign(Object.assign({}, v), { ogrenciler: guncelle(v.ogrenciler) })));
+            if (sonVeri.current) {
+                sonVeri.current = Object.assign(Object.assign({}, sonVeri.current), { ogrenciler: guncelle(sonVeri.current.ogrenciler) });
+            }
+            setDurum("");
+        }
+        catch (e) {
+            setDurum("Konular alınamadı");
         }
     };
     /* Öğrenciyi sunucudan tüm satırlarıyla siler */
@@ -1950,7 +1987,7 @@ function DerbentLgs() {
             React.createElement("div", { className: "durum-d" },
                 React.createElement("button", { className: "durum-b", onClick: yenile }, "Yenile"),
                 React.createElement("button", { className: "durum-b", onClick: cikis }, "\u00C7\u0131k\u0131\u015F"))),
-        React.createElement("main", { className: panelde ? "govde panel-govde" : "govde" }, mesajAcik && secili ? (React.createElement(Mesajlar, { o: secili, set: (y) => ogrGuncelle(secili.id, y), rol: rol })) : panelde ? (React.createElement(Panel, { veri: veri, kaydet: kaydet, setSeciliId: setSeciliId, setMesajAcik: setMesajAcik, rol: rol, ogrenciEkle: ogrenciEkle, ogrenciyiSil: ogrenciyiSil })) : !secili ? (React.createElement(Bos, { baslik: "\u00D6\u011Frenci bulunamad\u0131", metin: "Ko\u00E7unuzla ileti\u015Fime ge\u00E7in." })) : (React.createElement(React.Fragment, null,
+        React.createElement("main", { className: panelde ? "govde panel-govde" : "govde" }, mesajAcik && secili ? (React.createElement(Mesajlar, { o: secili, set: (y) => ogrGuncelle(secili.id, y), rol: rol })) : panelde ? (React.createElement(Panel, { veri: veri, kaydet: kaydet, setSeciliId: ogrenciAc, setMesajAcik: setMesajAcik, rol: rol, ogrenciEkle: ogrenciEkle, ogrenciyiSil: ogrenciyiSil })) : !secili ? (React.createElement(Bos, { baslik: "\u00D6\u011Frenci bulunamad\u0131", metin: "Ko\u00E7unuzla ileti\u015Fime ge\u00E7in." })) : (React.createElement(React.Fragment, null,
             sekme === "ozet" && React.createElement(Ozet, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc, rol: rol, setSekme: setSekme }),
             sekme === "program" && React.createElement(Takvim, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc, rol: rol, sablonlar: veri.sablonlar || [], setSablonlar: (l) => kaydet(Object.assign(Object.assign({}, veri), { sablonlar: l })) }),
             sekme === "soru" && React.createElement(Soru, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt }),
