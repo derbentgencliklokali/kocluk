@@ -1468,8 +1468,11 @@ const bosOgrenci = (o) => ({
     dersHedef: o.dersHedef || {},
     oynatmaListeleri: o.oynatmaListeleri || {},
     sinavTarihi: o.sinavTarihi || "", hedefGorsel: o.hedefGorsel || "",
+    veliAd: o.veliAd || "", veliTel: o.veliTel || "",
+    gorusmeSikligi: o.gorusmeSikligi || "",
+    profil: o.profil || {}, saglik: o.saglik || {},
     gorevler: [], kayitlar: [], denemeler: [], konular: {},
-    kitaplar: [], mesajlar: [], gorusmeler: [], kaynaklar: [],
+    kitaplar: [], mesajlar: [], gorusmeler: [], kaynaklar: [], aliskanliklar: [],
 });
 const paketiCoz = (paket) => {
     const liste = (paket.Ogrenciler || []).map(bosOgrenci);
@@ -1544,13 +1547,19 @@ const paketiCoz = (paket) => {
         if (!o)
             return;
         o.gorusmeler.push({ id: r.id, tarih: r.tarih, konusulan: r.konusulan,
-            hedef: r.hedef, paylas: !!r.paylas });
+            hedef: r.hedef, paylas: !!r.paylas, puan: Number(r.puan) || 0 });
     });
     (paket.Kaynaklar || []).forEach((r) => {
         const o = harita[r.ogrenciId];
         if (!o)
             return;
         o.kaynaklar.push({ id: r.id, ad: r.ad, grup: r.grup });
+    });
+    (paket.Aliskanliklar || []).forEach((r) => {
+        const o = harita[r.ogrenciId];
+        if (!o)
+            return;
+        o.aliskanliklar.push({ id: r.id, tarih: r.tarih, ad: r.ad, yapildi: !!r.yapildi });
     });
     /* Eksik ders listelerini müfredattan tamamla */
     liste.forEach((o) => { o.konular = konulariTamamla(o); });
@@ -1561,6 +1570,7 @@ const TABLO_ALAN = {
     gorevler: "Gorevler", kayitlar: "Kayitlar", denemeler: "Denemeler",
     konular: "Konular", kitaplar: "Kitaplar", mesajlar: "Mesajlar",
     gorusmeler: "Gorusmeler", kaynaklar: "Kaynaklar",
+    aliskanliklar: "Aliskanliklar",
 };
 const satirYap = (alan, o, k) => {
     const t = { id: k.id, ogrenciId: o.id };
@@ -1602,7 +1612,8 @@ const tabloFarki = (eski, yeni) => {
     };
 };
 const OGRENCI_ALANLARI = ["id", "kod", "veliKod", "ad", "sinif", "seviye", "alan",
-    "hedefLise", "hedefDilim", "haftalikHedef", "dersHedef", "oynatmaListeleri", "sinavTarihi", "hedefGorsel"];
+    "hedefLise", "hedefDilim", "haftalikHedef", "dersHedef", "oynatmaListeleri", "sinavTarihi", "hedefGorsel",
+    "veliAd", "veliTel", "gorusmeSikligi", "profil", "saglik"];
 const ogrenciSatiri = (o) => {
     const r = {};
     OGRENCI_ALANLARI.forEach((a) => (r[a] = o[a] === undefined ? "" : o[a]));
@@ -1610,6 +1621,10 @@ const ogrenciSatiri = (o) => {
         r.dersHedef = {};
     if (!r.oynatmaListeleri || typeof r.oynatmaListeleri !== "object")
         r.oynatmaListeleri = {};
+    if (!r.profil || typeof r.profil !== "object")
+        r.profil = {};
+    if (!r.saglik || typeof r.saglik !== "object")
+        r.saglik = {};
     return r;
 };
 /* ================================================================== */
@@ -2474,7 +2489,9 @@ function Ozet({ o, set, salt, videoAc, rol, setSekme }) {
             o.seviye === "yks"
                 ? [denemeKarti("tyt", "SON TYT DENEMESİ"), denemeKarti("ayt", "SON AYT DENEMESİ")]
                 : denemeKarti(undefined, "SON DENEME"),
+            React.createElement(Aliskanliklar, { o: o, set: set, salt: salt }),
             !salt && (React.createElement(Pomodoro, { gorevler: gorevleriAl(o), dl: dersleriGetir(o), tamamla: gorevIsaretle, salt: salt })),
+            React.createElement(TanimaFormu, { o: o, set: set, koc: rol === "yonetici" }),
             React.createElement(Gorusmeler, { o: o, set: set, rol: rol }),
             React.createElement("section", { className: "kart" },
                 React.createElement("div", { className: "etiket vurgu", style: { "--bc": BOLUMLER.kitap.renk } },
@@ -2657,19 +2674,179 @@ function Pomodoro({ gorevler, dl, tamamla, salt }) {
         gorevId && tur === "calisma" && (React.createElement("div", { className: "ipuc" }, "S\u00FCre bitince se\u00E7ti\u011Fin g\u00F6rev tamamland\u0131 olarak i\u015Faretlenir."))));
 }
 /* ================================================================== */
+/*  ÖĞRENCİ TANIMA FORMU                                               */
+/* ================================================================== */
+const TANIMA_BOLUM = [
+    {
+        ad: "Kişisel ve Aile Bilgileri", ikon: "ozet", renk: "#2F6FB5",
+        alanlar: [
+            ["anne", "Anne bilgileri", "Meslek, eğitim durumu"],
+            ["baba", "Baba bilgileri", "Meslek, eğitim durumu"],
+            ["anneBaba", "Anne-baba durumu", "Birlikte / ayrı / vefat"],
+            ["kardes", "Kardeş sayısı", ""],
+            ["oda", "Kendine ait oda", "Var / yok / paylaşımlı"],
+            ["barinma", "Barınma durumu", "Aile yanı / yurt / akraba"],
+        ],
+    },
+    {
+        ad: "Akademik ve Okul Geçmişi", ikon: "konu", renk: "#8A56A8",
+        alanlar: [
+            ["oncekiOkul", "Önceki okulu", ""],
+            ["sinifTekrari", "Sınıf tekrarı", "Var / yok"],
+            ["basarili", "Başarılı olduğu dersler", ""],
+            ["zorlandigi", "Zorlandığı dersler", ""],
+            ["calismaAliskanligi", "Çalışma alışkanlığı", "Düzenli / düzensiz / destekle"],
+            ["dyk", "DYK / kurs", "Devam ettiği destek programları"],
+        ],
+    },
+    {
+        ad: "İlgi Alanları ve Beceriler", ikon: "kitap", renk: "#159070",
+        alanlar: [
+            ["kulupler", "Katıldığı kulüpler", ""],
+            ["hobiler", "Hobileri ve ilgi alanları", ""],
+            ["spor", "Spor dalları", ""],
+            ["enstruman", "Çaldığı enstrümanlar", ""],
+            ["kitapTuru", "Okuduğu kitap türleri", ""],
+            ["okumaSikligi", "Kitap okuma sıklığı", "Her gün / haftada birkaç / nadiren"],
+            ["meslekHedefi", "Gelecekteki meslek hedefi", ""],
+        ],
+    },
+];
+const SAGLIK_ALAN = [
+    ["kronik", "Kronik rahatsızlık"],
+    ["alerji", "Alerji durumu"],
+    ["ilac", "Düzenli kullandığı ilaç"],
+    ["ozelEgitim", "Özel eğitim / BİLSEM"],
+    ["ameliyat", "Geçirdiği ameliyat"],
+    ["ozelDurum", "Dikkat edilmesi gereken diğer durumlar"],
+];
+function TanimaFormu({ o, set, koc }) {
+    const [acik, setAcik] = useState(null);
+    const [saglikAcik, setSaglikAcik] = useState(false);
+    if (!koc)
+        return null;
+    const p = o.profil || {};
+    const sg = o.saglik || {};
+    const yaz = (k, v) => set({ profil: Object.assign(Object.assign({}, (o.profil || {})), { [k]: v }) });
+    const saglikYaz = (k, v) => set({ saglik: Object.assign(Object.assign({}, (o.saglik || {})), { [k]: v }) });
+    const doluSayisi = (alanlar, kaynak) => alanlar.filter(([k]) => String(kaynak[k] || "").trim()).length;
+    const saglikDolu = doluSayisi(SAGLIK_ALAN, sg);
+    return (React.createElement("section", { className: "kart" },
+        React.createElement("div", { className: "kart-ust" },
+            React.createElement("div", { className: "etiket vurgu", style: { "--bc": "#4C6FD4" } },
+                React.createElement(Ikon, { ad: "ozet", boyut: 14 }),
+                " \u00D6\u011ERENC\u0130 TANIMA FORMU")),
+        React.createElement("div", { className: "tf-ozet" },
+            React.createElement(Alan, { etiket: "Veli ad\u0131 soyad\u0131", value: o.veliAd || "", onChange: (e) => set({ veliAd: e.target.value }) }),
+            React.createElement(Alan, { etiket: "Veli telefonu", type: "tel", value: o.veliTel || "", placeholder: "05xx xxx xx xx", onChange: (e) => set({ veliTel: e.target.value }) }),
+            React.createElement(Alan, { etiket: "G\u00F6r\u00FC\u015Fme s\u0131kl\u0131\u011F\u0131", value: o.gorusmeSikligi || "", placeholder: "Haftada bir", onChange: (e) => set({ gorusmeSikligi: e.target.value }) })),
+        TANIMA_BOLUM.map((b) => {
+            const dolu = doluSayisi(b.alanlar, p);
+            const bu = acik === b.ad;
+            return (React.createElement("div", { className: "tf-b", key: b.ad, style: { "--bc": b.renk } },
+                React.createElement("button", { className: bu ? "tf-bas acik" : "tf-bas", onClick: () => setAcik(bu ? null : b.ad) },
+                    React.createElement("span", { className: "tf-ikon" },
+                        React.createElement(Ikon, { ad: b.ikon, boyut: 16 })),
+                    React.createElement("span", { className: "tf-ad" }, b.ad),
+                    React.createElement("span", { className: "tf-say" },
+                        dolu,
+                        "/",
+                        b.alanlar.length),
+                    React.createElement("span", { className: "tf-ok" }, bu ? "−" : "+")),
+                bu && (React.createElement("div", { className: "tf-govde" }, b.alanlar.map(([k, ad, ipucu]) => (React.createElement(Alan, { key: k, etiket: ad, value: p[k] || "", placeholder: ipucu, onChange: (e) => yaz(k, e.target.value) })))))));
+        }),
+        React.createElement("div", { className: "tf-b saglik", style: { "--bc": "#A93A2D" } },
+            React.createElement("button", { className: saglikAcik ? "tf-bas acik" : "tf-bas", onClick: () => setSaglikAcik(!saglikAcik) },
+                React.createElement("span", { className: "tf-ikon" },
+                    React.createElement(Ikon, { ad: "analiz", boyut: 16 })),
+                React.createElement("span", { className: "tf-ad" }, "Sa\u011Fl\u0131k ve \u00D6zel Durumlar"),
+                React.createElement("span", { className: "tf-say" },
+                    saglikDolu,
+                    "/",
+                    SAGLIK_ALAN.length),
+                React.createElement("span", { className: "tf-ok" }, saglikAcik ? "−" : "+")),
+            saglikAcik && (React.createElement("div", { className: "tf-govde" },
+                React.createElement("div", { className: "tf-uyari" },
+                    "Bu b\u00F6l\u00FCm ",
+                    React.createElement("b", null, "yaln\u0131zca ko\u00E7 taraf\u0131ndan g\u00F6r\u00FCl\u00FCr"),
+                    "; \u00F6\u011Frenci ve veli giri\u015Flerine hi\u00E7 g\u00F6nderilmez. Sa\u011Fl\u0131k bilgisi KVKK'da \u00F6zel nitelikli ki\u015Fisel veridir \u2014 yaln\u0131zca velinin yaz\u0131l\u0131 r\u0131zas\u0131yla ve ger\u00E7ekten gerekli olan\u0131 doldurun."),
+                SAGLIK_ALAN.map(([k, ad]) => (React.createElement(Alan, { key: k, etiket: ad, value: sg[k] || "", onChange: (e) => saglikYaz(k, e.target.value) }))))))));
+}
+/* ================================================================== */
+/*  GÜNLÜK ALIŞKANLIK TAKİBİ                                          */
+/* ================================================================== */
+const ALISKANLIK = ["Paragraf", "Görevler", "Kitap okuma", "Problem çözme"];
+const ALIS_RENK = ["#E0714E", "#4C6FD4", "#8A56A8", "#159070"];
+function Aliskanliklar({ o, set, salt }) {
+    const hb = haftaBasi();
+    const gunler = useMemo(() => Array.from({ length: 7 }, (_, i) => tarihEkle(hb, i)), [hb]);
+    const kayitlar = o.aliskanliklar || [];
+    const bul = (ad, t) => kayitlar.find((x) => x.ad === ad && x.tarih === t);
+    const degistir = (ad, t) => {
+        if (salt)
+            return;
+        const v = bul(ad, t);
+        if (v) {
+            set({ aliskanliklar: kayitlar.map((x) => x.id === v.id ? Object.assign(Object.assign({}, x), { yapildi: !x.yapildi }) : x) });
+        }
+        else {
+            set({ aliskanliklar: [...kayitlar,
+                    { id: yeniId("a"), tarih: t, ad, yapildi: true }] });
+        }
+    };
+    return (React.createElement("section", { className: "kart" },
+        React.createElement("div", { className: "kart-ust" },
+            React.createElement("div", { className: "etiket vurgu", style: { "--bc": "#159070" } },
+                React.createElement(Ikon, { ad: "tik", boyut: 14 }),
+                " G\u00DCNL\u00DCK ALI\u015EKANLIKLAR"),
+            React.createElement("div", { className: "sayac" },
+                kisaTarih(gunler[0]),
+                " \u2013 ",
+                kisaTarih(gunler[6]))),
+        React.createElement("div", { className: "al-basl" },
+            React.createElement("span", null),
+            gunler.map((t) => (React.createElement("span", { key: t, className: t === bugun() ? "al-g bugun" : "al-g" }, GUN_KISA[gunIndeksi(t)][0]))),
+            React.createElement("span", { className: "al-o" }, "%")),
+        ALISKANLIK.map((ad, i) => {
+            const yapilan = gunler.filter((t) => { var _a; return (_a = bul(ad, t)) === null || _a === void 0 ? void 0 : _a.yapildi; }).length;
+            const oran = Math.round((yapilan / 7) * 100);
+            return (React.createElement("div", { className: "al-s", key: ad, style: { "--bc": ALIS_RENK[i] } },
+                React.createElement("span", { className: "al-ad" }, ad),
+                gunler.map((t) => {
+                    const v = bul(ad, t);
+                    return (React.createElement("button", { key: t, disabled: salt, className: (v === null || v === void 0 ? void 0 : v.yapildi) ? "al-k dolu" : "al-k", "aria-label": `${ad} · ${kisaTarih(t)}`, onClick: () => degistir(ad, t) }, (v === null || v === void 0 ? void 0 : v.yapildi) ? "✓" : ""));
+                }),
+                React.createElement("span", { className: "al-oran" }, oran)));
+        }),
+        React.createElement("div", { className: "al-halkalar" }, ALISKANLIK.map((ad, i) => {
+            const yapilan = gunler.filter((t) => { var _a; return (_a = bul(ad, t)) === null || _a === void 0 ? void 0 : _a.yapildi; }).length;
+            const oran = yapilan / 7;
+            const cevre = 2 * Math.PI * 22;
+            return (React.createElement("div", { className: "al-h", key: ad },
+                React.createElement("svg", { width: "56", height: "56", style: { transform: "rotate(-90deg)" } },
+                    React.createElement("circle", { cx: "28", cy: "28", r: "22", fill: "none", stroke: "#EDF4F5", strokeWidth: "7" }),
+                    React.createElement("circle", { cx: "28", cy: "28", r: "22", fill: "none", stroke: ALIS_RENK[i], strokeWidth: "7", strokeLinecap: "round", strokeDasharray: `${oran * cevre} ${cevre}` })),
+                React.createElement("span", { className: "al-h-s" },
+                    yapilan,
+                    "/7"),
+                React.createElement("span", { className: "al-h-a" }, ad)));
+        }))));
+}
+/* ================================================================== */
 /*  KOÇLUK GÖRÜŞME NOTLARI                                             */
 /* ================================================================== */
 function Gorusmeler({ o, set, rol }) {
     const koc = rol === "yonetici";
     const [acik, setAcik] = useState(false);
-    const [f, setF] = useState({ tarih: bugun(), konusulan: "", hedef: "", paylas: false });
+    const [f, setF] = useState({ tarih: bugun(), konusulan: "", hedef: "",
+        paylas: false, puan: 0 });
     const hepsi = (o.gorusmeler || []).sort((a, b) => b.tarih.localeCompare(a.tarih));
     const liste = koc ? hepsi : hepsi.filter((g) => g.paylas);
     const ekle = () => {
         if (!f.konusulan.trim() && !f.hedef.trim())
             return;
         set({ gorusmeler: [...(o.gorusmeler || []), Object.assign(Object.assign({}, f), { id: yeniId("gr") })] });
-        setF({ tarih: bugun(), konusulan: "", hedef: "", paylas: false });
+        setF({ tarih: bugun(), konusulan: "", hedef: "", paylas: false, puan: 0 });
         setAcik(false);
     };
     const sil = (id) => {
@@ -5106,6 +5283,56 @@ function Stil() {
 .ol-v i{font-style:normal;font-size:9px;font-weight:800;color:var(--sol);
   background:var(--yzy2);padding:2px 6px;border-radius:4px;flex-shrink:0;}
 
+/* tanıma formu */
+.tf-ozet{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:14px;}
+.tf-b{border:1px solid var(--cizgi);border-radius:13px;margin-bottom:7px;
+  overflow:hidden;}
+.tf-b.saglik{border-color:#EFBDB6;}
+.tf-bas{width:100%;display:flex;align-items:center;gap:10px;padding:11px 13px;
+  background:var(--yzy2);border:none;cursor:pointer;font-family:inherit;}
+.tf-bas.acik{background:color-mix(in srgb, var(--bc) 11%, #fff);}
+.tf-ikon{color:var(--bc);display:grid;place-items:center;flex-shrink:0;}
+.tf-ad{flex:1;text-align:left;font-size:12.5px;font-weight:800;color:var(--met);}
+.tf-say{font-size:10px;font-weight:800;color:var(--sol);
+  background:#fff;padding:3px 8px;border-radius:99px;}
+.tf-ok{font-size:16px;font-weight:900;color:var(--bc);width:14px;}
+.tf-govde{padding:13px;display:flex;flex-direction:column;gap:10px;}
+.tf-uyari{font-size:11.5px;font-weight:600;line-height:1.55;color:#8C2A20;
+  background:#FBEFEE;border-radius:10px;padding:11px 12px;}
+.tf-uyari b{font-weight:800;}
+
+/* alışkanlık takibi */
+.al-basl,.al-s{display:grid;grid-template-columns:1fr repeat(7,26px) 30px;
+  gap:4px;align-items:center;}
+.al-basl{padding-bottom:6px;}
+.al-g{font-size:9.5px;font-weight:800;color:var(--sol);text-align:center;}
+.al-g.bugun{color:var(--tur);}
+.al-o{font-size:9px;font-weight:800;color:var(--sol);text-align:right;}
+.al-s{padding:4px 0;border-top:1px solid var(--cizgi);}
+.al-ad{font-size:11.5px;font-weight:800;color:var(--bc);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;}
+.al-k{width:26px;height:26px;border-radius:7px;border:2px solid var(--bc);
+  background:#fff;color:#fff;font-size:13px;font-weight:900;line-height:1;
+  cursor:pointer;font-family:inherit;display:grid;place-items:center;}
+.al-k.dolu{background:var(--bc);}
+.al-k:disabled{cursor:default;opacity:.5;}
+.al-oran{font-size:10.5px;font-weight:900;color:var(--met);text-align:right;
+  font-variant-numeric:tabular-nums;}
+.al-halkalar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+  margin-top:16px;padding-top:14px;border-top:1px solid var(--cizgi);}
+.al-h{display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;}
+.al-h-s{position:absolute;top:20px;font-size:11px;font-weight:900;color:var(--met);}
+.al-h-a{font-size:9px;font-weight:700;color:var(--sol);text-align:center;
+  line-height:1.2;}
+
+/* yıldızlı değerlendirme */
+.yildizlar{display:flex;align-items:center;gap:3px;margin-top:6px;}
+.yildiz{background:none;border:none;font-size:22px;line-height:1;cursor:pointer;
+  color:var(--cizgi);padding:0 1px;font-family:inherit;}
+.yildiz.dolu{color:#E8B021;}
+.yildiz-y{font-size:11px;font-weight:700;color:var(--sol);margin-left:7px;}
+.grs-p{color:#E8B021;font-size:11px;margin-left:7px;letter-spacing:1px;}
+
 /* pomodoro */
 .pomo{display:flex;flex-direction:column;align-items:center;}
 .pomo .kart-ust{width:100%;}
@@ -6096,6 +6323,10 @@ function Stil() {
 
   .ikili-g,.uclu{gap:12px;}
   .oneri,.tavsiye,.bos-yorum,.grs-m{max-width:900px;}
+  .tf-ozet{grid-template-columns:repeat(3,1fr);}
+  .tf-govde{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .al-basl,.al-s{grid-template-columns:1fr repeat(7,34px) 36px;gap:6px;}
+  .al-k{width:34px;height:34px;}
   .ozet-ikili{display:grid;grid-template-columns:1fr 1fr;gap:16px;
     align-items:start;grid-column:1 / -1;}
   .kisayollar{grid-template-columns:repeat(4,1fr);gap:12px;}
