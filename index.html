@@ -1698,6 +1698,8 @@ function DerbentLgs() {
     const [bekliyor, setBekliyor] = useState(false);
     const [veri, setVeri] = useState({ ogrenciler: [], sablonlar: [] });
     const [yukleniyor, setYukleniyor] = useState(true);
+    /* Kayıtlı oturum var ama sunucuya ulaşılamadı: giriş formu yerine tekrar dene */
+    const [yeniden, setYeniden] = useState(null);
     const [durum, setDurum] = useState(""); /* senkron bilgisi */
     const [seciliId, setSeciliId] = useState(null);
     const [sekme, setSekme] = useState("ozet");
@@ -1720,7 +1722,15 @@ function DerbentLgs() {
             }
             catch (e) { /* yok */ }
             if (kayitli && (kayitli.kod || kayitli.sifre)) {
-                await baglan(kayitli, true);
+                let sonuc = false;
+                for (let i = 0; i < 3 && sonuc === false; i++) {
+                    if (i)
+                        await new Promise((r) => setTimeout(r, 2500 * i));
+                    sonuc = await baglan(kayitli, true);
+                }
+                if (sonuc === false)
+                    setYeniden(kayitli);
+                setYukleniyor(false);
             }
             else {
                 setYukleniyor(false);
@@ -1756,17 +1766,21 @@ function DerbentLgs() {
         try {
             const k = await apiGet({ ...kimlik, ...(kimlik.sifre ? { hafif: "1" } : {}) }, "veri");
             if (k.hata) {
-                if (!onbellek) {
+                /* Yalnızca şifre/kod gerçekten geçersizse oturum silinir.
+                   Sunucunun geçici hataları kullanıcıyı sistemden atmamalı. */
+                const yetki = /geçersiz/i.test(k.hata);
+                if (yetki) {
                     setGirisHata(k.hata);
                     setOturum(null);
                     try {
                         await window_storage.set(OTURUM_KEY, "");
                     }
                     catch (e) { }
+                    setBekliyor(false);
+                    setYukleniyor(false);
+                    return "yetki";
                 }
-                setBekliyor(false);
-                setYukleniyor(false);
-                return false;
+                throw new Error(k.hata);
             }
             const cozulmus = paketiCoz(k.rol === "koc" ? k : { ...k, Ogrenciler: [k.ogrenci] });
             setVeri(cozulmus);
@@ -1789,16 +1803,21 @@ function DerbentLgs() {
             if (onbellek) {
                 setOturum({ ...kimlik, rol: kimlik.sifre ? "koc" : "ogrenci" });
                 setDurum("Çevrimdışı — kayıtlı veriler gösteriliyor");
+                setBekliyor(false);
+                setYukleniyor(false);
+                return true;
             }
-            else if (!sessiz) {
-                setGirisHata("Bağlantı kurulamadı. İnternetinizi kontrol edin.");
+            if (!sessiz) {
+                setGirisHata("Bağlantı kurulamadı: " + (hata && hata.message ? hata.message : "İnternetinizi kontrol edin."));
             }
             setBekliyor(false);
-            setYukleniyor(false);
+            if (!sessiz)
+                setYukleniyor(false);
             return false;
         }
     };
     const cikis = async () => {
+        setYeniden(null);
         try {
             await window_storage.set(OTURUM_KEY, "");
         }
@@ -1993,6 +2012,23 @@ function DerbentLgs() {
         }
     };
     const secili = veri.ogrenciler.find((o) => o.id === seciliId) || null;
+    if (!oturum && !yukleniyor && yeniden) {
+        return (React.createElement("div", { className: "giris" },
+            React.createElement(Stil, null),
+            React.createElement("div", { className: "giris-kutu yeniden-kart" },
+                React.createElement(Logo, { boyut: 56 }),
+                React.createElement("div", { className: "yeniden-bas" }, "Sunucuya \u015Fu an ula\u015F\u0131lamad\u0131"),
+                React.createElement("p", { className: "yeniden-y" }, "Oturumunuz a\u00E7\u0131k, tekrar giri\u015F yapman\u0131z gerekmiyor. Google sunucusu bazen ilk a\u00E7\u0131l\u0131\u015Fta ge\u00E7 yan\u0131t verir."),
+                bekliyor
+                    ? React.createElement("button", { className: "birincil", disabled: true }, "Ba\u011Flan\u0131l\u0131yor\u2026")
+                    : React.createElement("button", { className: "birincil", onClick: async () => {
+                            const s2 = await baglan(yeniden, true);
+                            if (s2 !== false)
+                                setYeniden(null);
+                            setYukleniyor(false);
+                        } }, "Tekrar dene"),
+                React.createElement("button", { className: "yeniden-cik", onClick: cikis }, "Farkl\u0131 hesapla giri\u015F yap"))));
+    }
     if (!oturum && !yukleniyor) {
         return React.createElement(GirisEkrani, { girisYap: baglan, hata: girisHata, bekliyor: bekliyor });
     }
@@ -5301,7 +5337,8 @@ function Stil() {
 .durum-b:hover{border-color:var(--tur);color:var(--tur);}
 
 /* giriş ekranı */
-.giris{min-height:100vh;display:flex;align-items:center;justify-content:center;
+.giris{--tur:#06788C;--met:#12303A;--sol:#6C8A93;--yes:#159070;--cizgi:#DCE9EC;
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
   padding:20px;background:linear-gradient(160deg,#F1F6F7 0%,#E2EFF1 100%);
   font-family:'Montserrat',system-ui,sans-serif;}
 .giris-kutu{width:100%;max-width:360px;background:#fff;border-radius:22px;
@@ -6058,6 +6095,12 @@ function Stil() {
   line-height:1;}
 .zum-b:hover:not(:disabled){background:var(--tur-a);}
 .zum-b:disabled{opacity:.3;cursor:not-allowed;}
+.yeniden-kart{display:flex;flex-direction:column;align-items:stretch;gap:12px;text-align:center;}
+.yeniden-kart > svg,.yeniden-kart > img{align-self:center;}
+.yeniden-bas{font-size:17px;font-weight:800;color:#12303A;margin-top:4px;}
+.yeniden-y{font-size:13px;line-height:1.5;color:#6C8A93;margin:0;}
+.yeniden-cik{background:none;border:none;color:#6C8A93;font:inherit;font-size:12px;
+  font-weight:700;text-decoration:underline;cursor:pointer;padding:6px;}
 .tkv-sutun.pano{cursor:copy;background-color:rgba(6,120,140,.05);}
 .tk-sag{display:flex;align-items:center;gap:6px;}
 .geri-b{width:36px;height:36px;border-radius:10px;background:var(--yzy2);
