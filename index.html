@@ -2048,7 +2048,9 @@ function DerbentLgs() {
             React.createElement("div", { className: "yukleme" }, "Y\u00FCkleniyor\u2026"));
     }
     const panelde = rol === "yonetici" && !secili;
-    return (React.createElement("div", { className: "kok" },
+    return (React.createElement("div", { className: "kok", style: !panelde && secili && !mesajAcik && BOLUMLER[sekme]
+            /* Sayfa zemini, şeritte seçili bölümün pastel rengini alır */
+            ? { "--bg": `color-mix(in srgb, ${BOLUMLER[sekme].renk} 14%, #fff)` } : undefined },
         React.createElement(Stil, null),
         React.createElement("div", { className: "ust-sabit" },
             React.createElement("header", { className: "ust" },
@@ -5322,7 +5324,7 @@ function Stil() {
   --kir:#D9564A; --sari:#C9871B; --yes:#159070;
   --golge:0 1px 2px rgba(18,48,58,.05), 0 6px 18px rgba(18,48,58,.05);
   font-family:'Montserrat',system-ui,sans-serif;
-  background:var(--bg); color:var(--met);
+  background:var(--bg); color:var(--met); transition:background-color .25s;
   min-height:100vh; max-width:520px; margin:0 auto;
   padding-bottom:28px; -webkit-font-smoothing:antialiased;
 }
@@ -5341,7 +5343,7 @@ function Stil() {
 .ust-alt{font-size:10.5px;color:var(--sol);font-weight:600;letter-spacing:.4px;margin-top:2px;}
 
 .durum-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:7px 16px;background:var(--tur-a);border-bottom:1px solid var(--cizgi);
+  padding:7px 16px;background:transparent;border-bottom:1px solid rgba(18,48,58,.06);
   min-height:34px;}
 .durum-y{font-size:10.5px;font-weight:700;color:var(--tur);}
 .durum-d{display:flex;gap:5px;}
