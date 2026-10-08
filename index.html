@@ -1487,7 +1487,8 @@ const bosOgrenci = (o) => ({
     dersHedef: o.dersHedef || {},
     oynatmaListeleri: o.oynatmaListeleri || {},
     sinavTarihi: o.sinavTarihi || "", hedefGorsel: o.hedefGorsel || "",
-    veliAd: o.veliAd || "", veliTel: o.veliTel || "",
+    veliAd: (o.veliAd === false || o.veliAd === "false" || o.veliAd === true) ? "" : (o.veliAd || ""),
+    veliTel: /^\d{4}-\d{2}-\d{2}/.test(String(o.veliTel || "")) ? "" : (o.veliTel || ""),
     gorusmeSikligi: o.gorusmeSikligi || "",
     profil: o.profil || {}, saglik: o.saglik || {},
     gorevler: [], kayitlar: [], denemeler: [], konular: {},
@@ -1497,6 +1498,10 @@ const paketiCoz = (paket) => {
     const liste = (paket.Ogrenciler || []).map(bosOgrenci);
     const harita = {};
     liste.forEach((o) => (harita[o.id] = o));
+    /* Eski sürümde araya eklenen sütunlar yüzünden kaymış satır:
+       bolumAd hücresinde tarih, bolum hücresinde eski "tamam" değeri durur. */
+    const dogruMu = (v) => v === true || v === "true" || v === "TRUE" || v === "DOĞRU" || v === 1;
+    const tarihGibi = (v) => /^\d{4}-\d{2}-\d{2}/.test(String(v || ""));
     (paket.Gorevler || []).forEach((r) => {
         const o = harita[r.ogrenciId];
         if (!o)
@@ -1507,10 +1512,15 @@ const paketiCoz = (paket) => {
             calismaTuru: r.calismaTuru || "karma", kategori: r.kategori || undefined,
             kademe: r.kademe === "" ? null : Number(r.kademe),
             kokId: r.kokId || undefined,
-            bolum: (r.bolum === "" || r.bolum === undefined || r.bolum === null)
-                ? undefined : Number(r.bolum),
-            bolumAd: r.bolumAd || undefined,
-            tamam: !!r.tamam,
+            ...(tarihGibi(r.bolumAd)
+                ? { bolum: undefined, bolumAd: undefined, tamam: dogruMu(r.bolum) }
+                : {
+                    bolum: (r.bolum === "" || r.bolum === undefined || r.bolum === null
+                        || typeof r.bolum === "boolean" || isNaN(Number(r.bolum)))
+                        ? undefined : Number(r.bolum),
+                    bolumAd: r.bolumAd || undefined,
+                    tamam: !!r.tamam,
+                }),
         });
     });
     (paket.Kayitlar || []).forEach((r) => {
@@ -2040,23 +2050,30 @@ function DerbentLgs() {
     const panelde = rol === "yonetici" && !secili;
     return (React.createElement("div", { className: "kok" },
         React.createElement(Stil, null),
-        React.createElement("header", { className: "ust" },
-            mesajAcik
-                ? React.createElement("button", { className: "geri", onClick: () => setMesajAcik(false) }, "\u2039")
-                : secili && rol === "yonetici"
-                    ? React.createElement("button", { className: "geri", onClick: () => setSeciliId(null) }, "\u2039")
-                    : React.createElement(Logo, null),
-            React.createElement("div", { className: "ust-yazi" },
-                React.createElement("div", { className: "ust-ad" }, mesajAcik ? "Mesajlar" : panelde ? "DERBENT GENÇLİK LOKALİ" : secili === null || secili === void 0 ? void 0 : secili.ad),
-                React.createElement("div", { className: "ust-alt" }, mesajAcik
-                    ? secili === null || secili === void 0 ? void 0 : secili.ad
-                    : panelde
-                        ? "Eğitim Koçluğu Paneli"
-                        : `${secili === null || secili === void 0 ? void 0 : secili.sinif} · ${seviyeEtiket(secili)} · ${rol === "veli" ? "Veli görünümü"
-                            : rol === "yonetici" ? "Koç düzenlemesi" : "Takip"}`)),
-            secili && !mesajAcik && (React.createElement("button", { className: "msj-dugme", onClick: () => setMesajAcik(true), "aria-label": "Mesajlar" },
-                React.createElement("span", { className: "msj-ikon" }, "\u2709"),
-                okunmamis(secili, rol) > 0 && (React.createElement("span", { className: "msj-badge" }, okunmamis(secili, rol)))))),
+        React.createElement("div", { className: "ust-sabit" },
+            React.createElement("header", { className: "ust" },
+                mesajAcik
+                    ? React.createElement("button", { className: "geri", onClick: () => setMesajAcik(false) }, "\u2039")
+                    : secili && rol === "yonetici"
+                        ? React.createElement("button", { className: "geri", onClick: () => setSeciliId(null) }, "\u2039")
+                        : React.createElement(Logo, null),
+                React.createElement("div", { className: "ust-yazi" },
+                    React.createElement("div", { className: "ust-ad" }, mesajAcik ? "Mesajlar" : panelde ? "DERBENT GENÇLİK LOKALİ" : secili === null || secili === void 0 ? void 0 : secili.ad),
+                    React.createElement("div", { className: "ust-alt" }, mesajAcik
+                        ? secili === null || secili === void 0 ? void 0 : secili.ad
+                        : panelde
+                            ? "Eğitim Koçluğu Paneli"
+                            : `${secili === null || secili === void 0 ? void 0 : secili.sinif} · ${seviyeEtiket(secili)} · ${rol === "veli" ? "Veli görünümü"
+                                : rol === "yonetici" ? "Koç düzenlemesi" : "Takip"}`)),
+                secili && !mesajAcik && (React.createElement("button", { className: "msj-dugme", onClick: () => setMesajAcik(true), "aria-label": "Mesajlar" },
+                    React.createElement("span", { className: "msj-ikon" }, "\u2709"),
+                    okunmamis(secili, rol) > 0 && (React.createElement("span", { className: "msj-badge" }, okunmamis(secili, rol)))))),
+            !panelde && secili && !mesajAcik && (() => {
+                const sekmeler = Object.entries(BOLUMLER).filter(([id]) => id !== "mesaj");
+                return (React.createElement("nav", { className: "serit", style: { "--n": sekmeler.length } }, sekmeler.map(([id, b]) => (React.createElement("button", { key: id, onClick: () => setSekme(id), style: { "--bc": b.renk }, "aria-current": sekme === id ? "page" : undefined, className: sekme === id ? "serit-b etkin" : "serit-b" },
+                    React.createElement(Ikon, { ad: id, boyut: 22 }),
+                    React.createElement("span", null, b.ad))))));
+            })()),
         React.createElement("div", { className: "durum-bar" },
             React.createElement("span", { className: "durum-y" }, durum || (salt ? "Salt okunur görünüm" : "")),
             React.createElement("div", { className: "durum-d" },
@@ -2070,9 +2087,6 @@ function DerbentLgs() {
             sekme === "deneme" && React.createElement(Deneme, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt }),
             sekme === "analiz" && React.createElement(Analiz, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc }),
             sekme === "kitap" && React.createElement(Kitap, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt })))),
-        !panelde && secili && !mesajAcik && (React.createElement("nav", { className: "alt" }, Object.entries(BOLUMLER).filter(([id]) => id !== "mesaj").map(([id, b]) => (React.createElement("button", { key: id, onClick: () => setSekme(id), style: { "--bc": b.renk }, className: sekme === id ? "alt-b etkin" : "alt-b" },
-            React.createElement(Ikon, { ad: id, boyut: 19 }),
-            React.createElement("span", null, b.ad)))))),
         React.createElement(VideoOynatici, { video: video, kapat: () => setVideo(null) })));
 }
 /* ================================================================== */
@@ -5310,7 +5324,7 @@ function Stil() {
   font-family:'Montserrat',system-ui,sans-serif;
   background:var(--bg); color:var(--met);
   min-height:100vh; max-width:520px; margin:0 auto;
-  padding-bottom:84px; -webkit-font-smoothing:antialiased;
+  padding-bottom:28px; -webkit-font-smoothing:antialiased;
 }
 .yukleme{padding:80px 20px;text-align:center;color:var(--sol);font-weight:600;}
 
@@ -6511,6 +6525,31 @@ function Stil() {
   .uclu{gap:10px;}
 }
 
+
+/* ---------- bölüm şeridi (üstte, tam genişlik, eşit bölmeli) ---------- */
+.ust-sabit{position:sticky;top:0;z-index:20;}
+.ust-sabit .ust{position:static;}
+.serit{display:grid;grid-template-columns:repeat(var(--n), minmax(0,1fr));
+  background:#fff;border-bottom:1px solid var(--cizgi);
+  box-shadow:0 3px 10px rgba(18,48,58,.07);}
+.serit-b{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:5px;min-width:0;margin:0;padding:12px 4px 10px;border:none;border-radius:0;
+  font-family:inherit;font-size:12px;font-weight:800;letter-spacing:.2px;cursor:pointer;
+  background:color-mix(in srgb, var(--bc) 14%, #fff);
+  color:color-mix(in srgb, var(--bc) 82%, #000);
+  box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--bc) 30%, #fff);
+  transition:background .15s, color .15s;}
+.serit-b + .serit-b{border-left:1px solid rgba(255,255,255,.9);}
+.serit-b:hover{background:color-mix(in srgb, var(--bc) 24%, #fff);}
+.serit-b:focus-visible{outline:2px solid var(--bc);outline-offset:-4px;}
+.serit-b.etkin{background:var(--bc);color:#fff;
+  box-shadow:inset 0 -4px 0 color-mix(in srgb, var(--bc) 65%, #000);}
+.serit-b span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+@media (max-width:520px){
+  .serit-b{font-size:9.5px;padding:9px 1px 8px;gap:3px;letter-spacing:0;}
+  .serit-b svg{width:18px;height:18px;}
+}
+
 /* ---------- masaüstü ---------- */
 @media (min-width: 900px) {
   .kok{max-width:none;padding-bottom:36px;}
@@ -6521,13 +6560,7 @@ function Stil() {
   .durum-bar{padding:8px 32px;}
   .uyari{margin:14px 28px 0;}
 
-  /* sekmeler alta değil üste */
-  .alt{position:sticky;top:73px;bottom:auto;left:auto;right:auto;
-    max-width:none;margin:0;display:flex;justify-content:center;gap:5px;
-    padding:10px 28px;border-top:none;border-bottom:1px solid var(--cizgi);
-    background:rgba(255,255,255,.97);}
-  .alt-b{flex:0 0 auto;font-size:12.5px;letter-spacing:.2px;
-    padding:10px 20px;border-radius:99px;}
+  .serit-b{font-size:13.5px;padding:14px 6px 12px;gap:6px;}
 
   .govde{padding:22px 32px;gap:16px;max-width:none;margin:0;}
 
@@ -6565,7 +6598,6 @@ function Stil() {
   .ks-ikon{width:46px;height:46px;}
   .ks-ad{font-size:13px;}
   .ks-alt{font-size:11px;}
-  .alt-b{font-size:10px;gap:4px;padding:8px 0 6px;}
   .isaret-liste,.konu-sec{max-height:420px;}
   .vid-kutu{max-width:760px;}
   .sohbet-kart{min-height:340px;}
