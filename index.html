@@ -149,6 +149,13 @@ const AYT_TUM = {
     "a-din": { ad: "DİN KÜLTÜRÜ", kisa: "DİN", denemeSoru: 6 },
     "a-ydt": { ad: "YABANCI DİL", kisa: "YDT", denemeSoru: 80 },
 };
+/* TYT'de "en düşük verim" önerisinde alana göre dikkate alınan dersler */
+const TYT_ALAN_DERS = {
+    say: ["t-turkce", "t-mat", "t-fizik", "t-kimya", "t-biyoloji"],
+    ea: ["t-turkce", "t-mat", "t-tarih", "t-cog", "t-felsefe", "t-din"],
+    soz: ["t-turkce", "t-tarih", "t-cog", "t-felsefe", "t-din"],
+    dil: ["t-turkce", "t-mat"],
+};
 const ALANLAR = {
     say: { ad: "Sayısal", kisa: "SAY", ayt: ["a-mat", "a-fizik", "a-kimya", "a-biyoloji"] },
     ea: { ad: "Eşit Ağırlık", kisa: "EA", ayt: ["a-mat", "a-tde", "a-tarih1", "a-cog1"] },
@@ -951,12 +958,16 @@ const programGoc = (program) => {
 /* ================================================================== */
 const net = (d, y, k = 3) => d - y / k;
 const netYaz = (n) => (Math.round(n * 100) / 100).toFixed(2).replace(".", ",");
-const bugun = () => new Date().toISOString().slice(0, 10);
+/* Tarihler Türkiye saatine (cihazın yerel saatine) göre hesaplanır.
+   toISOString Greenwich saatini verdiği için gece 00:00–03:00 arası
+   önceki günü "bugün" sanıyordu. */
+const yerelTarih = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const bugun = () => yerelTarih(new Date());
 const sayiYaz = (n) => Number(n || 0).toLocaleString("tr-TR");
 const gunOnce = (n) => {
     const d = new Date();
     d.setDate(d.getDate() - n);
-    return d.toISOString().slice(0, 10);
+    return yerelTarih(d);
 };
 const trTarih = (iso) => {
     if (!iso)
@@ -967,9 +978,9 @@ const trTarih = (iso) => {
 const haftaBasi = () => {
     const d = new Date();
     d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-    return d.toISOString().slice(0, 10);
+    return yerelTarih(d);
 };
-const ayBasi = () => new Date().toISOString().slice(0, 7) + "-01";
+const ayBasi = () => bugun().slice(0, 7) + "-01";
 const gunFarki = (iso) => {
     if (!iso)
         return null;
@@ -1707,6 +1718,10 @@ function DerbentLgs() {
     const [girisHata, setGirisHata] = useState("");
     const [bekliyor, setBekliyor] = useState(false);
     const [veri, setVeri] = useState({ ogrenciler: [], sablonlar: [] });
+    /* Aynı dokunuşta art arda yapılan iki kayıt birbirini ezmesin diye
+       yazmalar her zaman en son hâlin üzerine yapılır. */
+    const veriRef = useRef(veri);
+    veriRef.current = veri;
     const [yukleniyor, setYukleniyor] = useState(true);
     /* Kayıtlı oturum var ama sunucuya ulaşılamadı: giriş formu yerine tekrar dene */
     const [yeniden, setYeniden] = useState(null);
@@ -1869,8 +1884,14 @@ function DerbentLgs() {
             return;
         setDurum("Kaydediliyor…");
         try {
-            for (const is of islemler)
-                await apiPost(oturum, is);
+            for (const is of islemler) {
+                const c = await apiPost(oturum, is);
+                /* Sunucu reddettiyse kaydedilmiş sayma; kullanıcı görsün */
+                if (c && c.hata) {
+                    setDurum("Kaydedilemedi: " + c.hata);
+                    return;
+                }
+            }
             sonVeri.current = JSON.parse(JSON.stringify(yeniVeri));
             setDurum("");
         }
@@ -1880,6 +1901,7 @@ function DerbentLgs() {
         }
     };
     const kaydet = (yeni) => {
+        veriRef.current = yeni;
         setVeri(yeni);
         if (oturum)
             onbellegeYaz(oturum, yeni);
@@ -1927,18 +1949,21 @@ function DerbentLgs() {
             setDurum("Yenilenemedi");
         }
     };
-    const ogrGuncelle = (id, yama) => kaydet({
-        ...veri,
-        ogrenciler: veri.ogrenciler.map((o) => {
-            if (o.id !== id)
-                return o;
-            const y = { ...o, ...yama };
-            if (yama.seviye !== undefined || yama.alan !== undefined) {
-                y.konular = konulariTamamla(y);
-            }
-            return y;
-        }),
-    });
+    const ogrGuncelle = (id, yama) => {
+        const v = veriRef.current;
+        kaydet({
+            ...v,
+            ogrenciler: v.ogrenciler.map((o) => {
+                if (o.id !== id)
+                    return o;
+                const y = { ...o, ...yama };
+                if (yama.seviye !== undefined || yama.alan !== undefined) {
+                    y.konular = konulariTamamla(y);
+                }
+                return y;
+            }),
+        });
+    };
     /* Koç yeni öğrenci eklerken sunucu kod üretir */
     const ogrenciEkle = async (taslak) => {
         try {
@@ -2082,8 +2107,8 @@ function DerbentLgs() {
                 React.createElement("button", { className: "durum-b", onClick: yenile }, "Yenile"),
                 React.createElement("button", { className: "durum-b", onClick: cikis }, "\u00C7\u0131k\u0131\u015F"))),
         React.createElement("main", { className: panelde ? "govde panel-govde" : "govde" }, mesajAcik && secili ? (React.createElement(Mesajlar, { o: secili, set: (y) => ogrGuncelle(secili.id, y), rol: rol })) : panelde ? (React.createElement(Panel, { veri: veri, kaydet: kaydet, setSeciliId: ogrenciAc, setMesajAcik: setMesajAcik, rol: rol, ogrenciEkle: ogrenciEkle, ogrenciyiSil: ogrenciyiSil })) : !secili ? (React.createElement(Bos, { baslik: "\u00D6\u011Frenci bulunamad\u0131", metin: "Ko\u00E7unuzla ileti\u015Fime ge\u00E7in." })) : (React.createElement(React.Fragment, null,
-            sekme === "ozet" && React.createElement(Ozet, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc, rol: rol, setSekme: setSekme }),
-            sekme === "program" && React.createElement(Takvim, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc, rol: rol, sablonlar: veri.sablonlar || [], setSablonlar: (l) => kaydet({ ...veri, sablonlar: l }) }),
+            sekme === "ozet" && React.createElement(Ozet, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc, rol: rol, setSekme: setSekme, mesajAc: () => setMesajAcik(true) }),
+            sekme === "program" && React.createElement(Takvim, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc, rol: rol, sablonlar: veri.sablonlar || [], setSablonlar: (l) => kaydet({ ...veriRef.current, sablonlar: l }) }),
             sekme === "soru" && React.createElement(Soru, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt }),
             sekme === "konu" && React.createElement(Konu, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt, videoAc: videoAc, rol: rol, listeGetir: listeGetir }),
             sekme === "deneme" && React.createElement(Deneme, { o: secili, set: (y) => ogrGuncelle(secili.id, y), salt: salt }),
@@ -2111,11 +2136,15 @@ function Panel({ veri, kaydet, setSeciliId, setMesajAcik, rol, ogrenciEkle, ogre
             const ist = istHesapla(o.kayitlar);
             return {
                 o, ist, oran: ist.hafta / (Number(o.haftalikHedef) || 1), durum: durumBul(o),
+                uyari: ogrenciUyarilari(o),
             };
         });
+        /* Öncelik: önce uyarısı olanlar (çoktan aza), sonra durum ve hedef oranı */
         return l.sort((a, b) => sirala === "ad"
             ? a.o.ad.localeCompare(b.o.ad, "tr")
-            : a.durum.sira - b.durum.sira || a.oran - b.oran);
+            : (b.uyari.length > 0) - (a.uyari.length > 0)
+                || b.uyari.length - a.uyari.length
+                || a.durum.sira - b.durum.sira || a.oran - b.oran);
     }, [veri.ogrenciler, sirala, suzgec]);
     const genel = useMemo(() => {
         const h = liste.reduce((a, x) => a + x.ist.hafta, 0);
@@ -2250,6 +2279,7 @@ function Panel({ veri, kaydet, setSeciliId, setMesajAcik, rol, ogrenciEkle, ogre
                     React.createElement("div", { className: `rozet ${x.durum.tip}` }, x.durum.ad)),
                 React.createElement("div", { className: "seviye-rozet-sar" },
                     React.createElement("span", { className: `seviye-rozet ${x.o.seviye}` }, seviyeEtiket(x.o))),
+                x.uyari.length > 0 && (React.createElement("div", { className: "ogr-uyarilar", onClick: () => setSeciliId(x.o.id) }, x.uyari.map((u) => (React.createElement("span", { key: u.tur, className: `ogr-uyari ${u.tur}` }, u.yazi))))),
                 React.createElement("div", { className: "ogr-bar", onClick: () => setSeciliId(x.o.id) },
                     React.createElement("div", { className: "ogr-yol" },
                         React.createElement("div", { className: "ogr-dolu", style: { width: `${Math.min(x.oran, 1) * 100}%` } })),
@@ -2313,7 +2343,290 @@ function Panel({ veri, kaydet, setSeciliId, setMesajAcik, rol, ogrenciEkle, ogre
 /* ================================================================== */
 /*  1. ÖZET                                                            */
 /* ================================================================== */
-function Ozet({ o, set, salt, videoAc, rol, setSekme }) {
+/* ================================================================== */
+/*  TAKİP HESAPLARI: dönem, plana uyum, son etkinlik, cevapsız mesaj   */
+/* ================================================================== */
+/* Değerlendirme dönemi: son görüşmeden bugüne. Görüşme yoksa son 7 gün. */
+const donemBul = (o) => {
+    const tarihler = (o.gorusmeler || [])
+        .map((g) => String(g.tarih || "").slice(0, 10))
+        .filter((t) => t && t <= bugun()).sort();
+    const son = tarihler[tarihler.length - 1];
+    return son
+        ? { bas: son, gorusme: true, etiket: `son görüşmeden (${kisaTarih(son)}) beri` }
+        : { bas: tarihEkle(bugun(), -6), gorusme: false, etiket: "son 7 gün · görüşme kaydı yok" };
+};
+/* Takvim etkinlikleri (okul, kurs vb.) çalışma görevi sayılmaz */
+const takipGorevleri = (o) => gorevleriAl(o).filter((g) => g.tip !== "etkinlik");
+const planUyumu = (o, d) => {
+    const g = takipGorevleri(o).filter((x) => x.tarih >= d.bas && x.tarih <= bugun());
+    const yapilan = g.filter((x) => x.tamam).length;
+    return { yapilan, toplam: g.length, oran: g.length ? yapilan / g.length : null };
+};
+/* Tarihi geçmiş (dün ve öncesi) ama işaretlenmemiş görevler */
+const yapilmayanGorevler = (o, d) => takipGorevleri(o)
+    .filter((x) => x.tarih >= d.bas && x.tarih < bugun() && !x.tamam)
+    .sort((a, b) => (a.tarih + (a.saat || "")).localeCompare(b.tarih + (b.saat || "")));
+/* Öğrencinin en son ne zaman bir şey yaptığı */
+const sonEtkinlik = (o) => {
+    const adaylar = [];
+    (o.kayitlar || []).forEach((k) => k.tarih && adaylar.push([k.tarih, "soru girdi"]));
+    takipGorevleri(o).forEach((g) => g.tamam && g.tarih <= bugun()
+        && adaylar.push([g.tarih, "görev işaretledi"]));
+    (o.mesajlar || []).forEach((m) => m.kimden === "ogrenci" && m.tarih
+        && adaylar.push([yerelTarih(new Date(m.tarih)), "mesaj yazdı"]));
+    const gecerli = adaylar.filter(([t]) => /^\d{4}-\d{2}-\d{2}$/.test(t) && t <= bugun());
+    if (!gecerli.length)
+        return null;
+    gecerli.sort((a, b) => b[0].localeCompare(a[0]));
+    const [tarih, ne] = gecerli[0];
+    return { tarih, ne, gun: gunFarki(tarih) };
+};
+const gunOnceYazi = (g) => (g === 0 ? "Bugün" : g === 1 ? "Dün" : `${g} gün önce`);
+/* Öğrenci ya da veli yazmış, koç henüz cevaplamamış */
+const cevapsizMesajlar = (o) => ["ogrenci", "veli"].map((kanal) => {
+    const liste = (o.mesajlar || []).filter((m) => m.kanal === kanal)
+        .sort((a, b) => String(a.tarih).localeCompare(String(b.tarih)));
+    let adet = 0;
+    for (let i = liste.length - 1; i >= 0 && liste[i].kimden !== "koc"; i--)
+        adet++;
+    return { kanal, adet };
+}).filter((x) => x.adet > 0);
+/* Koçun öğrenci listesindeki uyarılar */
+const ogrenciUyarilari = (o) => {
+    const u = [];
+    const se = sonEtkinlik(o);
+    if (!se || se.gun >= 2) {
+        u.push({ tur: "hareket", yazi: se ? `${se.gun} gündür hareket yok` : "Hiç hareket yok" });
+    }
+    const yg = yapilmayanGorevler(o, donemBul(o)).length;
+    if (yg)
+        u.push({ tur: "gorev", yazi: `${yg} yapılmayan görev` });
+    const cm = cevapsizMesajlar(o).reduce((a, x) => a + x.adet, 0);
+    if (cm)
+        u.push({ tur: "mesaj", yazi: `${cm} cevapsız mesaj` });
+    return u;
+};
+function KocOzetKart({ o, mesajAc, dl }) {
+    const d = donemBul(o);
+    const uyum = planUyumu(o, d);
+    const se = sonEtkinlik(o);
+    const yg = yapilmayanGorevler(o, d);
+    const cm = cevapsizMesajlar(o);
+    const [hepsi, setHepsi] = useState(false);
+    const gosterilen = hepsi ? yg : yg.slice(0, 5);
+    return (React.createElement("section", { className: "kart ko" },
+        React.createElement("div", { className: "kart-ust" },
+            React.createElement("div", { className: "etiket vurgu", style: { "--bc": "#06788C" } },
+                React.createElement(Ikon, { ad: "ozet", boyut: 14 }),
+                " KO\u00C7 \u00D6ZET\u0130"),
+            React.createElement("div", { className: "sayac" }, d.etiket)),
+        React.createElement("div", { className: "ko-uclu" },
+            React.createElement("div", { className: `ko-k ${uyum.oran === null ? "" : uyum.oran >= 0.8 ? "iyi" : uyum.oran >= 0.5 ? "orta" : "kotu"}` },
+                React.createElement("div", { className: "ko-s" },
+                    uyum.toplam ? `${uyum.yapilan}/${uyum.toplam}` : "—",
+                    uyum.toplam > 0 && React.createElement("i", null,
+                        "%",
+                        Math.round(uyum.oran * 100))),
+                React.createElement("div", { className: "ko-a" }, "Plana uyum")),
+            React.createElement("div", { className: `ko-k ${!se || se.gun >= 2 ? "kotu" : "iyi"}` },
+                React.createElement("div", { className: "ko-s" }, se ? gunOnceYazi(se.gun) : "Yok"),
+                React.createElement("div", { className: "ko-a" }, se ? `Son etkinlik · ${se.ne}` : "Henüz etkinlik yok")),
+            React.createElement("button", { className: `ko-k ${cm.length ? "kotu" : "iyi"}`, onClick: mesajAc, disabled: !mesajAc },
+                React.createElement("div", { className: "ko-s" }, cm.reduce((a, x) => a + x.adet, 0)),
+                React.createElement("div", { className: "ko-a" }, cm.length
+                    ? "Cevapsız: " + cm.map((x) => (x.kanal === "veli" ? "veli" : "öğrenci")).join(", ")
+                    : "Cevapsız mesaj yok"))),
+        React.createElement("div", { className: "ko-e" },
+            "YAPILMAYAN G\u00D6REVLER \u00B7 ",
+            yg.length),
+        yg.length === 0 ? (React.createElement("div", { className: "ko-bos" }, "Bu d\u00F6nemde tarihi ge\u00E7mi\u015F, yap\u0131lmam\u0131\u015F g\u00F6rev yok.")) : (React.createElement("div", { className: "ko-liste" },
+            gosterilen.map((g) => {
+                var _a;
+                return (React.createElement("div", { className: "ko-g", key: g.id, style: { "--c": gorevRenk(g) } },
+                    React.createElement("span", { className: "ko-g-t" },
+                        kisaTarih(g.tarih),
+                        g.saat ? ` · ${g.saat}` : ""),
+                    React.createElement("span", { className: "ko-g-d" }, ((_a = dl.find((x) => x.id === g.ders)) === null || _a === void 0 ? void 0 : _a.kisa) || ""),
+                    React.createElement("span", { className: "ko-g-k" }, g.konu)));
+            }),
+            yg.length > 5 && (React.createElement("button", { className: "link", onClick: () => setHepsi(!hepsi) }, hepsi ? "Daha az göster" : `${yg.length - 5} görev daha`))))));
+}
+function VeliOzetKart({ o, ist, hedef, gecenHafta, fark }) {
+    const d = donemBul(o);
+    const uyum = planUyumu(o, d);
+    const not = [...(o.gorusmeler || [])].filter((g) => g.paylas)
+        .sort((a, b) => String(b.tarih).localeCompare(String(a.tarih)))[0];
+    const oran = Math.min(ist.hafta / (hedef || 1), 1);
+    return (React.createElement("section", { className: "kart vo" },
+        React.createElement("div", { className: "kart-ust" },
+            React.createElement("div", { className: "etiket vurgu", style: { "--bc": "#06788C" } },
+                React.createElement(Ikon, { ad: "ozet", boyut: 14 }),
+                " HAFTALIK \u00D6ZET")),
+        React.createElement("div", { className: "vo-satir" },
+            React.createElement("div", { className: "vo-bas" },
+                React.createElement("span", null, "Plandaki g\u00F6revler"),
+                React.createElement("b", null, uyum.toplam ? `${uyum.yapilan} / ${uyum.toplam} yapıldı` : "Görev yok")),
+            React.createElement("div", { className: "vo-yol" },
+                React.createElement("div", { className: "vo-dolu", style: { width: `${(uyum.oran || 0) * 100}%` } })),
+            React.createElement("div", { className: "vo-alt" }, d.etiket)),
+        React.createElement("div", { className: "vo-satir" },
+            React.createElement("div", { className: "vo-bas" },
+                React.createElement("span", null, "Bu hafta \u00E7\u00F6z\u00FClen soru"),
+                React.createElement("b", null,
+                    ist.hafta.toLocaleString("tr-TR"),
+                    " / ",
+                    Number(hedef || 0).toLocaleString("tr-TR"))),
+            React.createElement("div", { className: "vo-yol" },
+                React.createElement("div", { className: "vo-dolu soru", style: { width: `${oran * 100}%` } })),
+            React.createElement("div", { className: "vo-alt" }, fark === null
+                ? "Haftalık hedef koç tarafından belirlenir."
+                : `Geçen hafta ${gecenHafta.toLocaleString("tr-TR")} soru · ${fark >= 0 ? "▲" : "▼"} %${Math.abs(fark)}`)),
+        React.createElement("div", { className: "vo-not" },
+            React.createElement("div", { className: "vo-not-a" },
+                "KO\u00C7UN SON NOTU",
+                not ? ` · ${trTarih(String(not.tarih).slice(0, 10))}` : ""),
+            not ? (React.createElement(React.Fragment, null,
+                React.createElement("div", { className: "vo-not-m" }, not.konusulan),
+                not.hedef && React.createElement("div", { className: "vo-not-h" },
+                    React.createElement("b", null, "Hedef:"),
+                    " ",
+                    not.hedef))) : (React.createElement("div", { className: "vo-not-m bos" }, "Ko\u00E7 hen\u00FCz sizinle payla\u015F\u0131lan bir not yazmad\u0131.")))));
+}
+/* ================================================================== */
+/*  GÖREV BİTİNCE: SORU KAYDI VE KONU İŞARETİ (öğrenci)                */
+/* ================================================================== */
+/* Görevin konusu Konu listesinde aynı adla varsa ve henüz işlenmediyse döner */
+const konuEslesmesi = (o, g) => {
+    const liste = (o.konular && o.konular[g.ders]) || [];
+    const ad = String(g.konu || "").trim().toLocaleLowerCase("tr");
+    if (!ad)
+        return null;
+    const k = liste.find((x) => String(x.ad || "").trim().toLocaleLowerCase("tr") === ad);
+    return k && (Number(k.asama) || 0) < 1 ? k : null;
+};
+/* Hangi sorular sorulacak: soru sayısı ve/veya konu işareti */
+const bitirIhtiyaci = (o, g) => {
+    if (!g || g.tip !== "calisma")
+        return null;
+    const tur = g.calismaTuru || "karma";
+    const soru = tur === "soru" || tur === "karma";
+    const konu = tur === "konu" || tur === "karma" ? konuEslesmesi(o, g) : null;
+    if (!soru && !konu)
+        return null;
+    return { soru, konu };
+};
+function GorevBitirPenceresi({ g, ihtiyac, o, set, kapat }) {
+    const dl = dersleriGetir(o);
+    const ders = dl.find((x) => x.id === g.ders);
+    const kid = "gk-" + g.id; /* göreve bağlı soru kaydı */
+    const mevcut = (o.kayitlar || []).find((x) => x.id === kid);
+    const [soru, setSoru] = useState(mevcut ? String(mevcut.soru) : "");
+    const [dogru, setDogru] = useState(mevcut ? String(mevcut.dogru) : "");
+    const [yanlis, setYanlis] = useState(mevcut ? String(mevcut.yanlis) : "");
+    const [konuDa, setKonuDa] = useState(false);
+    const [hata, setHata] = useState("");
+    const k = katsayi(o);
+    const S = Number(soru) || 0, D = Number(dogru) || 0, Y = Number(yanlis) || 0;
+    const bos = Math.max(0, S - D - Y);
+    const sadeceKonu = !ihtiyac.soru && ihtiyac.konu;
+    const kaydet = (konuIsaretle) => {
+        const yama = {};
+        if (ihtiyac.soru && soru !== "") {
+            if (S <= 0) {
+                setHata("Çözdüğün soru sayısını yaz.");
+                return;
+            }
+            if (D + Y > S) {
+                setHata("Doğru ve yanlışın toplamı soru sayısını geçemez.");
+                return;
+            }
+            const kayit = {
+                id: kid, tarih: g.tarih <= bugun() ? g.tarih : bugun(),
+                ders: g.ders, konu: g.konu, soru: S, dogru: D, yanlis: Y, bos,
+                kaynak: mevcut ? mevcut.kaynak || "" : "",
+            };
+            yama.kayitlar = mevcut
+                ? o.kayitlar.map((x) => (x.id === kid ? { ...x, ...kayit } : x))
+                : [...(o.kayitlar || []), kayit];
+        }
+        if (ihtiyac.konu && konuIsaretle) {
+            const liste = o.konular[g.ders] || [];
+            yama.konular = {
+                ...o.konular,
+                [g.ders]: liste.map((x) => (x.id === ihtiyac.konu.id
+                    ? { ...x, asama: Math.max(1, Number(x.asama) || 0) } : x)),
+            };
+        }
+        if (Object.keys(yama).length)
+            set(yama);
+        kapat();
+    };
+    const sayi = (deger, degistir, etiket, id) => (React.createElement("label", { className: "gb-alan", htmlFor: id },
+        React.createElement("span", null, etiket),
+        React.createElement("input", { id: id, type: "number", inputMode: "numeric", min: "0", value: deger, onChange: (e) => { setHata(""); degistir(e.target.value); } })));
+    return (React.createElement("div", { className: "gd-perde", onClick: kapat },
+        React.createElement("div", { className: "gd gb", style: { "--c": gorevRenk(g) }, onClick: (e) => e.stopPropagation() },
+            React.createElement("div", { className: "gd-ust renkli" },
+                React.createElement("div", null,
+                    React.createElement("div", { className: "gd-a" }, "G\u00D6REV TAMAMLANDI \u2713"),
+                    React.createElement("div", { className: "gd-k" }, g.konu),
+                    React.createElement("div", { className: "gd-b" }, ders === null || ders === void 0 ? void 0 :
+                        ders.ad,
+                        " \u00B7 ",
+                        kisaTarih(g.tarih)))),
+            React.createElement("div", { className: "gd-govde" },
+                ihtiyac.soru && (React.createElement(React.Fragment, null,
+                    React.createElement("div", { className: "gb-soru" }, "Ka\u00E7 soru \u00E7\u00F6zd\u00FCn?"),
+                    React.createElement("div", { className: "gb-sayilar" },
+                        sayi(soru, setSoru, "Soru", "gb-soru"),
+                        sayi(dogru, setDogru, "Doğru", "gb-dogru"),
+                        sayi(yanlis, setYanlis, "Yanlış", "gb-yanlis")),
+                    React.createElement("div", { className: "gb-net" },
+                        React.createElement("span", null,
+                            "Bo\u015F ",
+                            React.createElement("b", null, bos)),
+                        React.createElement("span", null,
+                            "Net ",
+                            React.createElement("b", null, netYaz(net(D, Y, k))))),
+                    mevcut && React.createElement("div", { className: "gb-not" }, "Bu g\u00F6rev i\u00E7in daha \u00F6nce girdi\u011Fin say\u0131lar d\u00FCzeltilecek."))),
+                ihtiyac.konu && !sadeceKonu && (React.createElement("label", { className: "gb-konu" },
+                    React.createElement("input", { type: "checkbox", checked: konuDa, onChange: (e) => setKonuDa(e.target.checked) }),
+                    React.createElement("span", null,
+                        "\u201C",
+                        ihtiyac.konu.ad,
+                        "\u201D konusunu Konu sekmesinde ",
+                        React.createElement("b", null, "i\u015Flendi"),
+                        " olarak i\u015Faretle"))),
+                sadeceKonu && (React.createElement("div", { className: "gb-soru" },
+                    "\u201C",
+                    ihtiyac.konu.ad,
+                    "\u201D konusunu Konu sekmesinde ",
+                    React.createElement("b", null, "i\u015Flendi"),
+                    " olarak i\u015Faretleyeyim mi?")),
+                hata && React.createElement("div", { className: "hata" }, hata)),
+            React.createElement("div", { className: "gb-dugmeler" }, sadeceKonu ? (React.createElement(React.Fragment, null,
+                React.createElement("button", { className: "birincil genis", onClick: () => kaydet(true) }, "Evet, i\u015Faretle"),
+                React.createElement("button", { className: "ikincil", onClick: kapat }, "Hay\u0131r"))) : (React.createElement(React.Fragment, null,
+                React.createElement("button", { className: "birincil genis", onClick: () => kaydet(konuDa) }, "Kaydet"),
+                React.createElement("button", { className: "ikincil", onClick: kapat }, "\u015Eimdi de\u011Fil")))))));
+}
+/* Öğrenci görevi bitirince pencereyi açar; açtıysa true döner */
+const useGorevBitir = (o, set, rol) => {
+    const [acik, setAcik] = useState(null);
+    const ac = (g) => {
+        if (rol !== "ogrenci")
+            return false;
+        const ih = bitirIhtiyaci(o, g);
+        if (!ih)
+            return false;
+        setAcik({ g, ih });
+        return true;
+    };
+    const pencere = acik ? (React.createElement(GorevBitirPenceresi, { g: acik.g, ihtiyac: acik.ih, o: o, set: set, kapat: () => setAcik(null) })) : null;
+    return [ac, pencere];
+};
+function Ozet({ o, set, salt, videoAc, rol, setSekme, mesajAc }) {
     const [duzenle, setDuzenle] = useState(false);
     const [gorselHata, setGorselHata] = useState("");
     const gorselSec = async (e) => {
@@ -2385,6 +2698,7 @@ function Ozet({ o, set, salt, videoAc, rol, setSekme }) {
         })
             .sort((a, b) => a.oran - b.oran);
     }, [o.dersHedef, o.kayitlar, o.seviye, o.alan]);
+    const [bitirAc, bitirPenceresi] = useGorevBitir(o, set, rol);
     /* Ana ekrandan tikleme — konu takibini de günceller */
     const gorevIsaretle = (g) => {
         if (salt)
@@ -2393,6 +2707,12 @@ function Ozet({ o, set, salt, videoAc, rol, setSekme }) {
         const guncel = gorevleriAl(o).map((x) => x.id === g.id ? { ...x, tamam: yeniDurum } : x);
         if (!yeniDurum) {
             set({ gorevler: guncel });
+            return;
+        }
+        /* Öğrenci: konu kendiliğinden işaretlenmez, pencerede sorulur */
+        if (rol === "ogrenci" && g.tip === "calisma") {
+            set({ gorevler: guncel });
+            bitirAc(g);
             return;
         }
         const hedefAsama = g.tip === "tekrar" ? (g.kademe || 0) + 2 : 1;
@@ -2434,15 +2754,50 @@ function Ozet({ o, set, salt, videoAc, rol, setSekme }) {
                         " net")),
                 d.dilim && (React.createElement("div", { className: "hedef" },
                     React.createElement("div", { className: "hedef-a" }, et.denemeOlcut),
-                    React.createElement("div", { className: "hedef-d buyuk" }, olcutYaz(o, d.dilim)))))) : (React.createElement(Bos, { baslik: "Hen\u00FCz deneme yok", metin: "Deneme sekmesinden ekleyebilirsin." }))));
+                    React.createElement("div", { className: "hedef-d buyuk" }, olcutYaz(o, d.dilim)))))) : (React.createElement(Bos, { baslik: "Hen\u00FCz deneme yok", metin: rol === "veli" ? "Henüz deneme girilmedi."
+                    : rol === "yonetici" ? "Deneme sekmesinden ekleyebilirsiniz."
+                        : "Deneme sekmesinden ekleyebilirsin." }))));
     };
     return (React.createElement(React.Fragment, null,
+        bitirPenceresi,
+        rol === "yonetici" && React.createElement(KocOzetKart, { o: o, mesajAc: mesajAc, dl: dl }),
+        rol === "veli" && (React.createElement(VeliOzetKart, { o: o, ist: ist, hedef: hedef, gecenHafta: gecenHafta, fark: fark })),
+        React.createElement("section", { className: "kart bugun-kart" },
+            React.createElement("div", { className: "kart-ust" },
+                React.createElement("div", { className: "etiket vurgu", style: { "--bc": BOLUMLER.program.renk } },
+                    React.createElement(Ikon, { ad: "program", boyut: 14 }),
+                    " BUG\u00DCN\u00DCN PROGRAMI"),
+                React.createElement("div", { className: "sayac" },
+                    bugunGorev.filter((g) => g.tamam).length,
+                    " / ",
+                    bugunGorev.length,
+                    " g\u00F6rev")),
+            bugunGorev.length === 0 ? (React.createElement(Bos, { baslik: "Bug\u00FCne g\u00F6rev yok", metin: rol === "yonetici" ? "Plan sekmesinden bugüne görev ekleyebilirsiniz."
+                    : "Bugün için planlanmış görev yok." })) : (bugunGorev.map((g) => {
+                var _a;
+                const vd = videoBul(o, g.ders, g.konu);
+                return (React.createElement("div", { className: g.tamam ? "gorev bitti" : "gorev", key: g.id },
+                    React.createElement("button", { className: g.tamam ? "gorev-kutu dolu" : "gorev-kutu", disabled: salt, "aria-label": "Tamamland\u0131", onClick: () => gorevIsaretle(g) }, g.tamam ? "✓" : ""),
+                    React.createElement("div", { className: "gorev-yazi" },
+                        React.createElement("div", { className: "gorev-ders" }, (_a = dl.find((x) => x.id === g.ders)) === null || _a === void 0 ? void 0 :
+                            _a.kisa,
+                            vd.toplam > 1 && (React.createElement("span", { className: "gorev-vid" },
+                                " \u00B7 video ",
+                                vd.izlenen,
+                                "/",
+                                vd.toplam))),
+                        React.createElement("div", { className: "gorev-konu" }, g.konu)),
+                    vd.toplam > 0 && (React.createElement("button", { className: "vid-b dolu genis", "aria-label": "Video", onClick: () => videoAc({
+                            liste: vd.liste, indeks: sonrakiBolum(vd.liste),
+                            baslik: g.konu, tamamla: () => { },
+                        }) }, "\u25B6"))));
+            }))),
         React.createElement("section", { className: "hero" },
             o.hedefGorsel && React.createElement("img", { className: "hero-foto", src: o.hedefGorsel, alt: "" }),
             React.createElement("div", { className: "hero-ic" },
-                React.createElement("div", { className: "hero-selam" },
+                rol === "ogrenci" && (React.createElement("div", { className: "hero-selam" },
                     selam,
-                    ilkAd ? `, ${ilkAd}` : ""),
+                    ilkAd ? `, ${ilkAd}` : "")),
                 kalanGun !== null && kalanGun >= 0 ? (React.createElement("div", { className: "hero-sayim" },
                     React.createElement("span", { className: "hero-rakam" }, kalanGun),
                     React.createElement("span", { className: "hero-birim" },
@@ -2470,7 +2825,7 @@ function Ozet({ o, set, salt, videoAc, rol, setSekme }) {
                     React.createElement("span", null,
                         React.createElement("b", null, ist.toplam.toLocaleString("tr-TR")),
                         " toplam soru")),
-                React.createElement("div", { className: "hero-motive" }, motivasyon))),
+                rol === "ogrenci" && React.createElement("div", { className: "hero-motive" }, motivasyon))),
         React.createElement("div", { className: "dortlu" }, [["Bugün", ist.bugun], ["Bu hafta", ist.hafta],
             ["Bu ay", ist.ay], ["Toplam", ist.toplam]].map(([a, v]) => (React.createElement("div", { key: a, className: "mini" },
             React.createElement("div", { className: "mini-s" }, v.toLocaleString("tr-TR")),
@@ -2530,10 +2885,11 @@ function Ozet({ o, set, salt, videoAc, rol, setSekme }) {
             React.createElement("div", { className: "seri-sag" },
                 React.createElement("div", { className: "seri-noktalar" }, seri.son14.map((g) => (React.createElement("span", { key: g.tarih, className: g.var ? "nokta dolu" : "nokta" })))),
                 React.createElement("div", { className: "seri-yazi" }, seri.simdi === 0
-                    ? "Bugün çözerek başlat"
+                    ? (rol === "ogrenci" ? "Bugün soru girerek başlat" : "Şu an seri yok")
                     : seri.simdi >= seri.enUzun && seri.simdi > 2
-                        ? "En uzun serindesin"
-                        : `Rekor ${seri.enUzun} gün`))),
+                        ? "En uzun serisi bu"
+                        : `Rekor ${seri.enUzun} gün`),
+                React.createElement("div", { className: "seri-alt" }, "Son 14 g\u00FCn \u00B7 soru girilen g\u00FCnler"))),
         dersHedefleri.length > 0 && (React.createElement("section", { className: "kart" },
             React.createElement("div", { className: "kart-ust" },
                 React.createElement("div", { className: "etiket vurgu", style: { "--bc": BOLUMLER.soru.renk } },
@@ -2554,35 +2910,6 @@ function Ozet({ o, set, salt, videoAc, rol, setSekme }) {
                         "/",
                         x.hedef)))))))),
         React.createElement("div", { className: "ozet-ikili" },
-            React.createElement("section", { className: "kart" },
-                React.createElement("div", { className: "kart-ust" },
-                    React.createElement("div", { className: "etiket vurgu", style: { "--bc": BOLUMLER.program.renk } },
-                        React.createElement(Ikon, { ad: "program", boyut: 14 }),
-                        " BUG\u00DCN\u00DCN PROGRAMI"),
-                    React.createElement("div", { className: "sayac" },
-                        bugunGorev.filter((g) => g.tamam).length,
-                        " / ",
-                        bugunGorev.length,
-                        " g\u00F6rev")),
-                bugunGorev.length === 0 ? (React.createElement(Bos, { baslik: "Bug\u00FCne g\u00F6rev yok", metin: "Program sekmesinden bug\u00FCn\u00FCn g\u00F6revlerini belirleyebilirsin." })) : (bugunGorev.map((g) => {
-                    var _a;
-                    const vd = videoBul(o, g.ders, g.konu);
-                    return (React.createElement("div", { className: g.tamam ? "gorev bitti" : "gorev", key: g.id },
-                        React.createElement("button", { className: g.tamam ? "gorev-kutu dolu" : "gorev-kutu", disabled: salt, "aria-label": "Tamamland\u0131", onClick: () => gorevIsaretle(g) }, g.tamam ? "✓" : ""),
-                        React.createElement("div", { className: "gorev-yazi" },
-                            React.createElement("div", { className: "gorev-ders" }, (_a = dl.find((x) => x.id === g.ders)) === null || _a === void 0 ? void 0 :
-                                _a.kisa,
-                                vd.toplam > 1 && (React.createElement("span", { className: "gorev-vid" },
-                                    " \u00B7 video ",
-                                    vd.izlenen,
-                                    "/",
-                                    vd.toplam))),
-                            React.createElement("div", { className: "gorev-konu" }, g.konu)),
-                        vd.toplam > 0 && (React.createElement("button", { className: "vid-b dolu genis", "aria-label": "Video", onClick: () => videoAc({
-                                liste: vd.liste, indeks: sonrakiBolum(vd.liste),
-                                baslik: g.konu, tamamla: () => { },
-                            }) }, "\u25B6"))));
-                }))),
             React.createElement("section", { className: "kart" },
                 React.createElement("div", { className: "kart-ust" },
                     React.createElement("div", { className: "etiket vurgu", style: { "--bc": BOLUMLER.analiz.renk } },
@@ -2618,8 +2945,6 @@ function Ozet({ o, set, salt, videoAc, rol, setSekme }) {
             o.seviye === "yks"
                 ? [denemeKarti("tyt", "SON TYT DENEMESİ"), denemeKarti("ayt", "SON AYT DENEMESİ")]
                 : denemeKarti(undefined, "SON DENEME"),
-            React.createElement(Aliskanliklar, { o: o, set: set, salt: salt }),
-            !salt && (React.createElement(Pomodoro, { gorevler: gorevleriAl(o), dl: dersleriGetir(o), tamamla: gorevIsaretle, salt: salt })),
             React.createElement(TanimaFormu, { o: o, set: set, koc: rol === "yonetici" }),
             React.createElement(Gorusmeler, { o: o, set: set, rol: rol }),
             React.createElement("section", { className: "kart" },
@@ -2635,7 +2960,10 @@ function Ozet({ o, set, salt, videoAc, rol, setSekme }) {
                         " ",
                         kitap.bitirme
                             ? `${trTarih(kitap.bitirme)} tarihinde bitirdi`
-                            : `${trTarih(kitap.baslama)} tarihinde başladı`))) : (React.createElement(Bos, { baslik: "Kitap listesi bo\u015F", metin: "Kitap sekmesinden ekleyebilirsin." }))))));
+                            : `${trTarih(kitap.baslama)} tarihinde başladı`))) : (React.createElement(Bos, { baslik: "Kitap listesi bo\u015F", metin: rol === "veli" ? "Henüz kitap girilmedi."
+                        : rol === "yonetici" ? "Kitap sekmesinden ekleyebilirsiniz."
+                            : "Kitap sekmesinden ekleyebilirsin." }))),
+            React.createElement(Aliskanliklar, { o: o, set: set, salt: salt }))));
 }
 /* ================================================================== */
 /*  POMODORO SAYACI                                                    */
@@ -3230,24 +3558,37 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
             ? `"${kok.konu}" eklendi · 5 tekrar otomatik planlandı`
             : `"${kok.konu}" eklendi`);
     };
+    const [bitirAc, bitirPenceresi] = useGorevBitir(o, set, rol);
     /* --- tamamlama: konu takibini de günceller --- */
     const tamamla = (g) => {
         if (salt)
             return;
         const yeniDurum = !g.tamam;
-        yaz(gorevler.map((x) => (x.id === g.id ? { ...x, tamam: yeniDurum } : x)));
-        if (!yeniDurum)
+        const yeniListe = gorevler.map((x) => (x.id === g.id ? { ...x, tamam: yeniDurum } : x));
+        if (!yeniDurum) {
+            yaz(yeniListe);
             return;
+        }
+        /* Öğrenci: soru sayısı ve konu işareti pencerede sorulur */
+        if (rol === "ogrenci" && g.tip === "calisma") {
+            yaz(yeniListe);
+            bitirAc(g);
+            return;
+        }
         const hedefAsama = g.tip === "tekrar" ? g.kademe + 2 : 1;
         const liste = o.konular[g.ders] || [];
         const konu = liste.find((k) => k.ad === g.konu);
+        /* Görev ve konu tek yazmada güncellenir; iki ayrı yazma birbirini eziyordu */
         if (konu && konu.asama < hedefAsama) {
-            set({
+            yaz(yeniListe, {
                 konular: {
                     ...o.konular,
                     [g.ders]: liste.map((k) => k.id === konu.id ? { ...k, asama: hedefAsama } : k),
                 },
             });
+        }
+        else {
+            yaz(yeniListe);
         }
     };
     const guncelle = (id, deg) => yaz(gorevler.map((x) => (x.id === id ? { ...x, ...deg } : x)));
@@ -3465,6 +3806,7 @@ function Takvim({ o, set, salt, videoAc, rol, sablonlar, setSablonlar }) {
             React.createElement("span", { className: "tk-konu" }, g.konu)));
     };
     return (React.createElement(React.Fragment, null,
+        bitirPenceresi,
         React.createElement("section", { className: "kart tk-ust-kart" },
             React.createElement("div", { className: "tk-nav" },
                 React.createElement("button", { className: "tk-ok hafta", title: "Bir hafta geri", onClick: () => setOdak(tarihEkle(odak, -7)) }, "\u00AB"),
@@ -4452,7 +4794,9 @@ function Soru({ o, set, salt }) {
                         React.createElement("span", null, "Net")),
                     liste.map((x) => {
                         var _a;
-                        return (React.createElement("div", { className: "tr", key: x.id, onDoubleClick: () => !salt && sil(x.id) },
+                        return (React.createElement("div", { className: "tr", key: x.id, onDoubleClick: () => !salt
+                                && window.confirm(`${x.konu || "Bu"} · ${x.soru} soru kaydı silinsin mi?`)
+                                && sil(x.id) },
                             React.createElement("span", { className: "hucre-konu" },
                                 React.createElement("b", null, ((_a = dl.find((z) => z.id === x.ders)) === null || _a === void 0 ? void 0 : _a.kisa) || "—"),
                                 " ",
@@ -4681,8 +5025,9 @@ function Konu({ o, set, salt, videoAc, rol, listeGetir }) {
                     " konu")),
             React.createElement("div", { className: "konu-basl" },
                 React.createElement("span", null),
-                ASAMALAR.map((a) => (React.createElement("span", { key: a, className: "konu-basl-h" }, a === "İşlendi" ? "İŞL" : a.slice(0, 2)))),
+                ASAMALAR.map((a, i) => (React.createElement("span", { key: a, className: "konu-basl-h", title: a }, i === 0 ? "İŞL" : TEKRAR_KISA[i - 1]))),
                 React.createElement("span", { className: "konu-basl-h" }, "V\u0130D")),
+            React.createElement("div", { className: "konu-acik" }, "\u0130\u015EL: konu i\u015Flendi \u00B7 1G, 1H, 1A, 3A, 6A: 1 g\u00FCn, 1 hafta, 1 ay, 3 ay ve 6 ay sonraki tekrar"),
             liste.length === 0 && (React.createElement(Bos, { baslik: "Konu yok", metin: "A\u015Fa\u011F\u0131dan bu derse konu ekleyebilirsin." })),
             liste.map((k) => {
                 const vd = videoDurum(k);
@@ -4796,11 +5141,14 @@ function Deneme({ o, set, salt }) {
             const n = net(Number(((_a = son[x.id]) === null || _a === void 0 ? void 0 : _a.d) || 0), Number(((_b = son[x.id]) === null || _b === void 0 ? void 0 : _b.y) || 0), k);
             return { ...x, n, oran: n / x.denemeSoru };
         });
+        /* TYT önerisi öğrencinin alanındaki derslerden seçilir */
+        const alanDers = yks && tur === "tyt" ? TYT_ALAN_DERS[o.alan] : null;
+        const aday = alanDers ? dersNet.filter((x) => alanDers.includes(x.id)) : dersNet;
         return {
             fark: onceki ? denemeNet(son, o) - denemeNet(onceki, o) : null,
-            dersNet, zayif: [...dersNet].sort((a, b) => a.oran - b.oran)[0],
+            dersNet, zayif: [...(aday.length ? aday : dersNet)].sort((a, b) => a.oran - b.oran)[0],
         };
-    }, [denemeler, dl, k]);
+    }, [denemeler, dl, k, tur, o.alan]);
     const netler = denemeler.map((d) => denemeNet(d, o));
     const enY = netler.length ? Math.max(...netler) : 1;
     const enD = netler.length ? Math.min(...netler) : 0;
@@ -4872,7 +5220,9 @@ function Deneme({ o, set, salt }) {
                         React.createElement("div", { className: "cubuk-dolu", style: { width: `${Math.max(x.oran, 0) * 100}%` } })),
                     React.createElement("span", { className: "cubuk-net" }, netYaz(x.n)))))),
                 React.createElement("div", { className: "oneri" },
-                    "En d\u00FC\u015F\u00FCk verim ",
+                    yks && tur === "tyt" && TYT_ALAN_DERS[o.alan]
+                        ? `${(ALANLAR[o.alan] || {}).kisa} alanındaki dersler arasında en düşük verim `
+                        : "En düşük verim ",
                     React.createElement("b", null, analiz.zayif.ad),
                     " dersinde. Bu hafta soru \u00E7\u00F6z\u00FCm\u00FCnde bu derse a\u011F\u0131rl\u0131k verilmeli."))),
             denemeler.length >= 2 && (React.createElement("section", { className: "kart" },
@@ -4935,7 +5285,9 @@ function Deneme({ o, set, salt }) {
             React.createElement("section", { className: "kart" },
                 React.createElement("div", { className: "etiket" }, "T\u00DCM DENEMELER"),
                 [...denemeler].reverse().map((d) => (React.createElement("div", { key: d.id },
-                    React.createElement("div", { className: "dnm", onDoubleClick: () => !salt && sil(d.id) },
+                    React.createElement("div", { className: "dnm", onDoubleClick: () => !salt
+                            && window.confirm(`"${d.ad || "Deneme"}" silinsin mi? Bütün ders netleri de silinir.`)
+                            && sil(d.id) },
                         React.createElement("div", null,
                             React.createElement("div", { className: "dnm-ad" }, d.ad || "Deneme"),
                             React.createElement("div", { className: "dnm-t" }, trTarih(d.tarih))),
@@ -5064,6 +5416,29 @@ function Analiz({ o, set, salt, videoAc }) {
     };
     const isaretliVar = eksikler.length > 0;
     const bos = useMemo(() => bosAnaliz(o, denemeler), [o, denemeler]);
+    /* Günlük soru kayıtlarında doğru oranı en düşük konular (son 30 gün) */
+    const ZOR_GUN = 30, ZOR_EN_AZ = 10;
+    const zorKonular = useMemo(() => {
+        const sinir = tarihEkle(bugun(), -(ZOR_GUN - 1));
+        const turDersi = (id) => !yks ? true
+            : tur === "ayt" ? String(id).startsWith("a-") : !String(id).startsWith("a-");
+        const m = {};
+        o.kayitlar.forEach((x) => {
+            if (!x.konu || !x.tarih || x.tarih < sinir || !turDersi(x.ders))
+                return;
+            const a = `${x.ders}|${x.konu}`;
+            if (!m[a])
+                m[a] = { ders: x.ders, konu: x.konu, soru: 0, dogru: 0, yanlis: 0 };
+            m[a].soru += Number(x.soru) || 0;
+            m[a].dogru += Number(x.dogru) || 0;
+            m[a].yanlis += Number(x.yanlis) || 0;
+        });
+        return Object.values(m)
+            .filter((x) => x.soru >= ZOR_EN_AZ)
+            .map((x) => ({ ...x, oran: x.dogru / x.soru }))
+            .sort((a, b) => a.oran - b.oran)
+            .slice(0, 6);
+    }, [o.kayitlar, tur, yks]);
     return (React.createElement(React.Fragment, null,
         yks && (React.createElement("div", { className: "cipler yapisik" }, [["tyt", "TYT"], ["ayt", "AYT"]].map(([id, ad]) => (React.createElement("button", { key: id, onClick: () => setTur(id), className: tur === id ? "cip etkin" : "cip" }, ad))))),
         React.createElement("div", { className: "cipler yapisik" }, [["1", "SON DENEME"], ["3", "SON 3"], ["hepsi", "TÜMÜ"]].map(([id, ad]) => (React.createElement("button", { key: id, onClick: () => setKapsam(id), className: kapsam === id ? "cip etkin" : "cip" }, ad)))),
@@ -5097,6 +5472,38 @@ function Analiz({ o, set, salt, videoAc }) {
                     React.createElement("span", { className: "cubuk-net" },
                         "%",
                         Math.round(x.oran * 100))))))))),
+        React.createElement("section", { className: "kart" },
+            React.createElement("div", { className: "kart-ust" },
+                React.createElement("div", { className: "etiket" }, "SORU \u00C7\u00D6Z\u00DCM\u00DCNDE ZORLANILAN KONULAR"),
+                React.createElement("div", { className: "sayac" },
+                    "son ",
+                    ZOR_GUN,
+                    " g\u00FCn")),
+            zorKonular.length === 0 ? (React.createElement(Bos, { baslik: "Yeterli soru kayd\u0131 yok", metin: `Bir konuda son ${ZOR_GUN} günde en az ${ZOR_EN_AZ} soru girildiğinde burada doğru oranı görünür.` })) : (React.createElement(React.Fragment, null,
+                zorKonular.map((x) => {
+                    const d = dl.find((y) => y.id === x.ders);
+                    const renk = x.oran < 0.5 ? "#D9564A" : x.oran < 0.7 ? "#C9871B" : "#159070";
+                    return (React.createElement("div", { className: "zk", key: x.ders + x.konu, style: { "--zc": renk } },
+                        React.createElement("div", { className: "zk-ust" },
+                            React.createElement("span", { className: "zk-d", style: { color: dersRenk(x.ders) } }, (d === null || d === void 0 ? void 0 : d.kisa) || ""),
+                            React.createElement("span", { className: "zk-k" }, x.konu),
+                            React.createElement("span", { className: "zk-o" },
+                                "%",
+                                Math.round(x.oran * 100))),
+                        React.createElement("div", { className: "zk-yol" },
+                            React.createElement("div", { className: "zk-dolu", style: { width: `${x.oran * 100}%` } })),
+                        React.createElement("div", { className: "zk-a" },
+                            x.soru,
+                            " soru \u00B7 ",
+                            x.dogru,
+                            " do\u011Fru \u00B7 ",
+                            x.yanlis,
+                            " yanl\u0131\u015F")));
+                }),
+                React.createElement("div", { className: "zk-not" },
+                    "Do\u011Fru oran\u0131 = do\u011Fru \u00F7 \u00E7\u00F6z\u00FClen soru. En az ",
+                    ZOR_EN_AZ,
+                    " soru \u00E7\u00F6z\u00FClen konular g\u00F6sterilir.")))),
         !isaretliVar ? (React.createElement("section", { className: "kart" },
             React.createElement("div", { className: "etiket" }, "DENEME ANAL\u0130Z\u0130"),
             React.createElement(Bos, { baslik: "Hen\u00FCz i\u015Faretli konu yok", metin: salt
@@ -5190,13 +5597,16 @@ const HAZIR_MESAJ = [
 const mesajZaman = (iso) => {
     const t = new Date(iso);
     const bg = new Date(bugun());
-    const g = Math.round((bg - new Date(t.toISOString().slice(0, 10))) / 86400000);
-    const saat = t.toTimeString().slice(0, 5);
+    if (isNaN(t))
+        return "";
+    const g = Math.round((bg - new Date(yerelTarih(t))) / 86400000);
+    /* Yalnızca tarih kaydedilmiş eski mesajlarda saat gösterilmez */
+    const saat = /T\d/.test(String(iso)) ? t.toTimeString().slice(0, 5) : "";
     if (g === 0)
-        return saat;
+        return saat || "Bugün";
     if (g === 1)
-        return `Dün ${saat}`;
-    return `${trTarih(t.toISOString().slice(0, 10))} ${saat}`;
+        return saat ? `Dün ${saat}` : "Dün";
+    return `${trTarih(yerelTarih(t))}${saat ? " " + saat : ""}`;
 };
 const okunmamis = (o, rol) => {
     const m = o.mesajlar || [];
@@ -5294,7 +5704,9 @@ function Kitap({ o, set, salt }) {
             React.createElement("button", { className: "birincil", onClick: ekle }, "Kitab\u0131 kaydet"))),
         o.kitaplar.length === 0 ? (React.createElement(Bos, { baslik: "Kitap yok", metin: salt ? "Öğrenci henüz kitap eklemedi." : "Okumaya başladığı kitabı ekle." })) : (React.createElement("section", { className: "kart" },
             React.createElement("div", { className: "etiket" }, "K\u0130TAPLIK"),
-            [...o.kitaplar].reverse().map((k) => (React.createElement("div", { className: "ktp", key: k.id, onDoubleClick: () => !salt && sil(k.id) },
+            [...o.kitaplar].reverse().map((k) => (React.createElement("div", { className: "ktp", key: k.id, onDoubleClick: () => !salt
+                    && window.confirm(`"${k.ad}" kitabı listeden silinsin mi?`)
+                    && sil(k.id) },
                 React.createElement("div", null,
                     React.createElement("div", { className: "ktp-ad" }, k.ad),
                     React.createElement("div", { className: "ktp-alt" },
@@ -5415,6 +5827,71 @@ function Stil() {
 .oran-yazi b{color:var(--tur);font-weight:800;}
 
 /* ana ekran kahraman kartı */
+/* ---------- koç özeti ---------- */
+.ko-uclu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+.ko-k{--kc:#6C8A93;background:color-mix(in srgb, var(--kc) 9%, #fff);
+  border:1.5px solid color-mix(in srgb, var(--kc) 22%, #fff);border-radius:14px;
+  padding:12px 10px;text-align:left;font-family:inherit;min-width:0;}
+button.ko-k{cursor:pointer;}
+button.ko-k:disabled{cursor:default;}
+.ko-k.iyi{--kc:#159070;} .ko-k.orta{--kc:#C9871B;} .ko-k.kotu{--kc:#D9564A;}
+.ko-s{font-size:20px;font-weight:900;color:color-mix(in srgb, var(--kc) 85%, #000);
+  line-height:1.1;font-variant-numeric:tabular-nums;}
+.ko-s i{font-style:normal;font-size:12px;font-weight:800;margin-left:6px;opacity:.8;}
+.ko-a{font-size:10.5px;font-weight:700;color:var(--sol);margin-top:5px;line-height:1.35;}
+.ko-e{font-size:9px;font-weight:800;letter-spacing:1.1px;color:var(--sol);margin:16px 0 8px;}
+.ko-bos{font-size:12.5px;font-weight:600;color:var(--sol);}
+.ko-liste{display:flex;flex-direction:column;gap:5px;}
+.ko-g{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:10px;align-items:center;
+  font-size:12.5px;padding:8px 10px;border-radius:10px;border-left:3px solid var(--c);
+  background:color-mix(in srgb, var(--c) 8%, #fff);}
+.ko-g-t{font-weight:700;color:var(--sol);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.ko-g-d{font-weight:900;color:color-mix(in srgb, var(--c) 80%, #000);font-size:11px;}
+.ko-g-k{font-weight:700;color:var(--met);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+@media (max-width:520px){
+  .ko-uclu{gap:6px;}
+  .ko-k{padding:10px 8px;}
+  .ko-s{font-size:17px;}
+}
+
+/* ---------- veli özeti ---------- */
+.vo{display:flex;flex-direction:column;gap:16px;}
+.vo .kart-ust{margin-bottom:0;}
+.vo-satir{display:flex;flex-direction:column;gap:6px;}
+.vo-bas{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  font-size:12.5px;font-weight:700;color:var(--sol);}
+.vo-bas b{font-size:15px;font-weight:900;color:var(--met);font-variant-numeric:tabular-nums;}
+.vo-yol{height:10px;border-radius:99px;background:#E6EEF0;overflow:hidden;}
+.vo-dolu{height:100%;border-radius:99px;background:#159070;}
+.vo-dolu.soru{background:#E0714E;}
+.vo-alt{font-size:11px;font-weight:600;color:var(--sol);}
+.vo-not{background:var(--tur-a);border-radius:14px;padding:12px 14px;}
+.vo-not-a{font-size:9px;font-weight:800;letter-spacing:1.1px;color:var(--tur);}
+.vo-not-m{font-size:13.5px;font-weight:600;color:var(--met);line-height:1.5;margin-top:6px;}
+.vo-not-m.bos{color:var(--sol);font-weight:600;}
+.vo-not-h{font-size:12.5px;color:var(--met);margin-top:6px;line-height:1.45;}
+
+.bugun-kart{border:1.5px solid color-mix(in srgb, #4C6FD4 30%, #fff);}
+
+/* ---------- seri kartı ---------- */
+.seri-kart{display:flex;align-items:center;gap:16px;--sr:#E0714E;}
+.seri-kart.s0{--sr:#9FB6BC;}
+.seri-kart.s1{--sr:#E8A04A;}
+.seri-kart.s2{--sr:#E0714E;}
+.seri-kart.s3,.seri-kart.s4{--sr:#C9452E;}
+.seri-sol{flex:0 0 auto;width:76px;height:76px;border-radius:18px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(160deg, color-mix(in srgb, var(--sr) 78%, #fff), var(--sr));
+  color:#fff;box-shadow:0 6px 16px color-mix(in srgb, var(--sr) 30%, transparent);}
+.seri-sayi{font-size:31px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;}
+.seri-a{font-size:9.5px;font-weight:800;letter-spacing:.4px;margin-top:4px;}
+.seri-sag{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;}
+.seri-noktalar{display:grid;grid-template-columns:repeat(14,minmax(0,16px));gap:5px;}
+.nokta{display:block;aspect-ratio:1;border-radius:50%;background:#E6EEF0;}
+.nokta.dolu{background:var(--sr);}
+.seri-yazi{font-size:13px;font-weight:800;color:var(--met);}
+.seri-alt{font-size:10.5px;font-weight:600;color:var(--sol);margin-top:-6px;}
+
 .hero{position:relative;overflow:hidden;border-radius:22px;padding:0;
   background:linear-gradient(152deg,#0C8AA0 0%,#076076 46%,#0B2E38 100%);
   box-shadow:0 10px 30px rgba(10,58,71,.22);}
@@ -5642,6 +6119,22 @@ function Stil() {
 .hk-r-a{font-size:9px;font-weight:700;color:rgba(255,255,255,.7);}
 
 /* öğrenci kartı */
+.zk{padding:9px 0;border-bottom:1px solid var(--cizgi);}
+.zk:last-of-type{border-bottom:none;}
+.zk-ust{display:flex;align-items:baseline;gap:8px;}
+.zk-d{font-size:11px;font-weight:900;flex-shrink:0;}
+.zk-k{flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--met);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.zk-o{font-size:15px;font-weight:900;color:var(--zc);font-variant-numeric:tabular-nums;}
+.zk-yol{height:6px;border-radius:99px;background:#E6EEF0;margin:6px 0 5px;overflow:hidden;}
+.zk-dolu{height:100%;border-radius:99px;background:var(--zc);}
+.zk-a{font-size:11px;font-weight:600;color:var(--sol);font-variant-numeric:tabular-nums;}
+.zk-not{font-size:10.5px;font-weight:600;color:var(--sol);margin-top:10px;}
+.ogr-uyarilar{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 2px;cursor:pointer;}
+.ogr-uyari{font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:99px;
+  background:#FBEAEA;color:#A93A2D;}
+.ogr-uyari.gorev{background:#FDF0E3;color:#9A5B0B;}
+.ogr-uyari.mesaj{background:#F6E8F1;color:#9C3B74;}
 .ogr-kart{background:var(--yzy);border:1px solid var(--cizgi);
   border-radius:18px;padding:16px;box-shadow:var(--golge);}
 .ogr-ust{display:flex;justify-content:space-between;align-items:flex-start;
@@ -5793,6 +6286,8 @@ function Stil() {
 
 /* konu takibi */
 
+.konu-acik{font-size:10.5px;font-weight:600;color:var(--sol);line-height:1.45;
+  margin:-2px 0 8px;}
 .konu-basl-h{font-size:7.5px;font-weight:800;color:var(--sol);
   letter-spacing:.4px;text-align:center;}
 
@@ -5836,6 +6331,26 @@ function Stil() {
   gap:8px;margin-top:12px;flex-wrap:wrap;}
 
 /* görev penceresi */
+.gb .gd-govde{display:flex;flex-direction:column;gap:12px;padding:16px;}
+.gb-soru{font-size:15px;font-weight:800;color:var(--met);line-height:1.4;}
+.gb-sayilar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+.gb-alan{display:flex;flex-direction:column;gap:5px;font-size:10px;font-weight:800;
+  letter-spacing:.6px;color:var(--sol);text-transform:uppercase;}
+.gb-alan input{width:100%;min-width:0;font:inherit;font-size:22px;font-weight:800;
+  text-align:center;color:var(--met);background:var(--yzy2);border:1.5px solid transparent;
+  border-radius:12px;padding:10px 4px;outline:none;font-variant-numeric:tabular-nums;}
+.gb-alan input:focus{border-color:var(--c, var(--tur));background:#fff;}
+.gb-net{display:flex;justify-content:space-between;font-size:12.5px;font-weight:700;
+  color:var(--sol);padding:2px 2px 0;}
+.gb-net b{color:var(--met);font-size:15px;margin-left:4px;font-variant-numeric:tabular-nums;}
+.gb-not{font-size:11px;font-weight:600;color:var(--sol);}
+.gb-konu{display:flex;gap:10px;align-items:flex-start;font-size:13px;font-weight:600;
+  color:var(--met);line-height:1.45;background:var(--yzy2);border-radius:12px;padding:11px 12px;
+  cursor:pointer;}
+.gb-konu input{width:20px;height:20px;flex-shrink:0;margin:1px 0 0;accent-color:var(--c, var(--tur));}
+.gb-dugmeler{display:flex;gap:8px;padding:12px 16px 16px;border-top:1px solid var(--cizgi);}
+.gb-dugmeler .birincil{margin-top:0;flex:1;}
+.gb-dugmeler .ikincil{flex:0 0 auto;}
 .gd-perde{position:fixed;inset:0;z-index:60;background:rgba(10,30,36,.55);
   display:flex;align-items:center;justify-content:center;padding:14px;}
 .gd{width:100%;max-width:420px;max-height:min(88vh, 660px);background:#fff;
